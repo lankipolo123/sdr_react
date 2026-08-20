@@ -3,6 +3,7 @@ import { join } from 'path'
 import { PortScheduler } from './portScheduler'
 import { ChannelController, type ChannelState, type LogEntry } from './channelController'
 import { loadChannelStates, saveChannelStates } from './channelStore'
+import { appendLogEntry, getLogPage } from './logStore'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
 import { MAX_CHANNELS, type Level } from './protocol/constants'
 
@@ -13,6 +14,13 @@ import { MAX_CHANNELS, type Level } from './protocol/constants'
 // own user_data_dir() convention.
 const channelsIniPath = join(app.getPath('userData'), 'config', 'channels.ini')
 const savedChannelStates = loadChannelStates(channelsIniPath)
+
+// Permanent internal command log (see logStore.ts) - distinct from the
+// live 'log:entry' IPC stream broadcastChannelChanged's sibling below
+// still sends for the ephemeral corner-box/Dashboard view. Every entry
+// gets appended here too, on disk, with no delete/clear path exposed
+// anywhere in this app.
+const logsPath = join(app.getPath('userData'), 'logs', 'commands.jsonl')
 
 // All 16 channels live from launch - matches the reference app's own
 // "blind send" architecture (main_page.py: `for address in
@@ -67,7 +75,10 @@ function createWindow(): void {
 
   for (const controller of channels.values()) {
     controller.on('changed', (state: ChannelState) => broadcastChannelChanged(win, state))
-    controller.on('log', (entry: LogEntry) => broadcastLogEntry(win, entry))
+    controller.on('log', (entry: LogEntry) => {
+      appendLogEntry(entry, logsPath)
+      broadcastLogEntry(win, entry)
+    })
   }
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -101,6 +112,8 @@ app.whenReady().then(() => {
   ipcMain.handle('channel:setMode', (_event, address: number, mode: number) =>
     requireChannel(address).setMode(mode)
   )
+
+  ipcMain.handle('logs:getPage', (_event, page: number, pageSize: number) => getLogPage(page, pageSize, logsPath))
 
   createWindow()
 

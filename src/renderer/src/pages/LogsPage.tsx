@@ -1,26 +1,55 @@
-import { useState } from 'react'
-import { useLogs, useClearLogs } from '../contexts/LogsContext'
+import { useEffect, useState } from 'react'
+import type { LogEntry } from '../../../main/channelController'
 
 const PAGE_SIZE = 15
 
-// Full, dedicated log view - a proper table instead of the compact
-// single-line rows used for the small tab on ChannelsPage. Shows
-// entry.sentTokens only (the DLL-translated, safe-to-show values) -
-// same rule as everywhere else logs are displayed.
+// Reads the permanent, on-disk internal log (see main/logStore.ts) a
+// page at a time via IPC instead of holding the whole history in
+// renderer memory - scales with the log file, not with how long the
+// app has been running. Distinct from the live LogsContext used by
+// the corner box on the Commands page and Dashboard's Recent
+// Activity, which stays an ephemeral, session-only feed ("today's
+// logs"); this page is the permanent record and deliberately has no
+// clear/delete action anywhere in it.
 export function LogsPage(): React.JSX.Element {
-  const entries = useLogs()
-  const clearLogs = useClearLogs()
   const [page, setPage] = useState(0)
+  const [entries, setEntries] = useState<LogEntry[]>([])
+  const [total, setTotal] = useState(0)
 
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages - 1)
-  const pageEntries = entries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE)
+  useEffect(() => {
+    let cancelled = false
+    window.sdr.logs.getPage(page, PAGE_SIZE).then((result) => {
+      if (!cancelled) {
+        setEntries(result.entries)
+        setTotal(result.total)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [page])
+
+  // Keep the newest page live: a fresh command bumps the count
+  // everywhere, and if we're actually looking at page 0 (the most
+  // recent entries), prepend it there too instead of requiring a
+  // manual refresh to see it.
+  useEffect(() => {
+    const unsubscribe = window.sdr.logs.onEntry((entry) => {
+      setTotal((t) => t + 1)
+      if (page === 0) {
+        setEntries((prev) => [entry, ...prev].slice(0, PAGE_SIZE))
+      }
+    })
+    return unsubscribe
+  }, [page])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <h1 className="text-sm font-semibold text-text-dark">Logs</h1>
-        <span className="text-xs text-text-muted-ref">{entries.length} entries</span>
+        <span className="text-xs text-text-muted-ref">{total} entries</span>
       </div>
 
       {entries.length === 0 ? (
@@ -39,7 +68,7 @@ export function LogsPage(): React.JSX.Element {
               </tr>
             </thead>
             <tbody>
-              {pageEntries.map((entry, i) => (
+              {entries.map((entry, i) => (
                 <tr
                   key={`${entry.timestamp}-${i}`}
                   className={i % 2 === 1 ? 'bg-yellow-100' : 'border-b border-border-subtle'}
@@ -59,39 +88,27 @@ export function LogsPage(): React.JSX.Element {
         </div>
       )}
 
-      {entries.length > 0 && (
-        <div className="mt-3 flex items-center justify-between">
+      {totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-end gap-2 text-xs">
           <button
             type="button"
-            onClick={clearLogs}
-            className="rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy/90"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
           >
-            Clear Log
+            Prev
           </button>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-                className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
-              >
-                Prev
-              </button>
-              <span className="text-text-muted-ref">
-                Page {currentPage + 1} of {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-                className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <span className="text-text-muted-ref">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

@@ -1,24 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { LogEntry } from '../../../main/channelController'
 
 const MAX_ENTRIES = 200
 
-interface LogsContextValue {
-  entries: LogEntry[]
-  clearLogs: () => void
-}
+const LogsContext = createContext<LogEntry[] | null>(null)
 
-const LogsContext = createContext<LogsContextValue | null>(null)
-
+// Live, ephemeral log feed for the Commands page's corner box and
+// Dashboard's Recent Activity - "today's session" view, not the
+// permanent record. That's LogsPage.tsx instead, which reads a
+// separate, append-only on-disk log via IPC pagination (see
+// main/logStore.ts) rather than this in-memory list, and has no
+// clear/delete action anywhere. This context intentionally has no
+// clear function either - if you want it gone, it disappears on its
+// own once you close the app.
+//
 // Single subscription for the whole app, mounted once at the root -
-// the corner Logs box, the dedicated Logs page, and the Dashboard's
-// Recent Activity card all read from this same accumulated list
-// instead of each keeping its own local state. A component-local
-// useState (the old useLogs()) only starts collecting entries from
-// whenever THAT component happened to mount, so the Logs page (which
-// only mounts when you navigate to it) was missing everything that
-// arrived before that - this fixes that by never un-mounting the
-// subscription in the first place.
+// every consumer reads the same accumulated list instead of each
+// keeping its own component-local copy (a local useState per consumer
+// only accumulates from whenever that specific component mounted,
+// which caused a real desync between the corner box and the Logs page
+// before this was centralized).
 export function LogsProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [entries, setEntries] = useState<LogEntry[]>([])
 
@@ -29,19 +30,11 @@ export function LogsProvider({ children }: { children: ReactNode }): React.JSX.E
     return unsubscribe
   }, [])
 
-  const clearLogs = useCallback(() => setEntries([]), [])
-
-  return <LogsContext.Provider value={{ entries, clearLogs }}>{children}</LogsContext.Provider>
+  return <LogsContext.Provider value={entries}>{children}</LogsContext.Provider>
 }
 
 export function useLogs(): LogEntry[] {
-  const ctx = useContext(LogsContext)
-  if (ctx === null) throw new Error('useLogs must be used within a LogsProvider')
-  return ctx.entries
-}
-
-export function useClearLogs(): () => void {
-  const ctx = useContext(LogsContext)
-  if (ctx === null) throw new Error('useClearLogs must be used within a LogsProvider')
-  return ctx.clearLogs
+  const entries = useContext(LogsContext)
+  if (entries === null) throw new Error('useLogs must be used within a LogsProvider')
+  return entries
 }

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ChannelState, LogEntry } from '../main/channelController'
+import type { LogPage } from '../main/logStore'
 import { MAX_CHANNELS, type Level } from '../main/protocol/constants'
 import type { DllCallResult } from '../main/dll/transit'
 
@@ -44,7 +45,10 @@ const api = {
       const listener = (_event: Electron.IpcRendererEvent, entry: LogEntry): void => callback(entry)
       ipcRenderer.on('log:entry', listener)
       return () => ipcRenderer.removeListener('log:entry', listener)
-    }
+    },
+    // Reads a page of the permanent on-disk log (see logStore.ts) -
+    // deliberately no delete/clear call exposed anywhere in this API.
+    getPage: (page: number, pageSize: number): Promise<LogPage> => ipcRenderer.invoke('logs:getPage', page, pageSize)
   }
 }
 
