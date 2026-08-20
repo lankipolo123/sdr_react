@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
 import { LogsPanel } from '../components/LogsPanel'
@@ -14,7 +13,6 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
-  const [logsOpen, setLogsOpen] = useState(true)
 
   return (
     <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -70,18 +68,12 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <div className="pl-44">{children}</div>
         {current !== 'logs' && (
           <div className="relative z-20 flex flex-1 flex-col">
-            <button
-              type="button"
-              onClick={() => setLogsOpen((open) => !open)}
-              className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
-            >
+            <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
               Logs
-            </button>
-            {logsOpen && (
-              <div className="flex-1 rounded-b-md border border-border-subtle bg-white">
-                <LogsPanel />
-              </div>
-            )}
+            </div>
+            <div className="flex-1 rounded-b-md border border-border-subtle bg-white">
+              <LogsPanel />
+            </div>
           </div>
         )}
       </div>
