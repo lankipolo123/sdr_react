@@ -9,7 +9,7 @@ export function LogsPanel(): React.JSX.Element {
   const entries = useLogs()
 
   return (
-    <div className="font-mono text-[10px] leading-relaxed">
+    <div className="font-mono text-[9px] leading-relaxed">
       {entries.length === 0 ? (
         <div className="p-2 text-text-muted-ref">No commands sent yet.</div>
       ) : (
@@ -18,18 +18,13 @@ export function LogsPanel(): React.JSX.Element {
           // 4th... row (0-indexed odd) gets the yellow zebra stripe.
           const isEvenRow = i % 2 === 1
           return (
-            <div
-              key={`${entry.timestamp}-${i}`}
-              className={`flex gap-2 px-2 py-1 ${isEvenRow ? 'bg-yellow-100 text-black' : ''}`}
-            >
-              <span className={isEvenRow ? 'shrink-0' : 'shrink-0 text-text-muted-ref'}>
-                {new Date(entry.timestamp).toLocaleTimeString()}
-              </span>
-              <span className="shrink-0 font-semibold text-accent-blue">CH{String(entry.address).padStart(2, '0')}</span>
-              <span className={isEvenRow ? 'shrink-0' : 'shrink-0 text-text-dark'}>{entry.label}</span>
-              <span className={isEvenRow ? 'truncate' : 'truncate text-text-muted-ref'}>
-                {entry.sentTokens.join(' ')}
-              </span>
+            <div key={`${entry.timestamp}-${i}`} className={`px-2 py-1 ${isEvenRow ? 'bg-yellow-100 text-black' : ''}`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-semibold text-accent-blue">CH{String(entry.address).padStart(2, '0')}</span>
+                <span className={isEvenRow ? '' : 'text-text-muted-ref'}>{new Date(entry.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <div className={isEvenRow ? 'truncate' : 'truncate text-text-dark'}>{entry.label}</div>
+              <div className={isEvenRow ? 'truncate' : 'truncate text-text-muted-ref'}>{entry.sentTokens.join(' ')}</div>
             </div>
           )
         })

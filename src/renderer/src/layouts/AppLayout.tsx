@@ -1,6 +1,5 @@
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
-import { LogsPanel } from '../components/LogsPanel'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
 import type { PageId } from './pages'
@@ -53,31 +52,15 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Sidebar is absolutely positioned (see Sidebar.tsx) - fully out of
-          this flex row's layout flow so it can never stretch, squish
-          siblings, or leave a partial-looking border depending on
-          content height. pl-32 on the content pane just reserves enough
-          left space so the floating sidebar doesn't sit on top of it. No
-          bottom reservation - the logs overlay is a small bottom-left
-          corner box now (see below), not worth losing this much grid
-          space over; it can sit on top of the last row when it's open. */}
+      {/* Sidebar now carries both page nav and a collapsible Logs section
+          in one component (see Sidebar.tsx) - absolutely positioned, out
+          of this flex row's layout flow so it can never stretch or be
+          squished by its sibling. pl-72 on the content pane reserves
+          enough left space (sidebar is w-64) so it doesn't sit on top of
+          the grid. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-32">{children}</div>
-      </div>
-
-      {/* Logs floats over the page the same way Sidebar does - absolute,
-          out of flow - docked to the bottom-left, flush against the
-          sidebar's left edge, sized to its own content instead of
-          stretching the full window width. Stacked above the sidebar
-          (z-20 > Sidebar's z-10) since it's the higher-priority overlay. */}
-      <div className="absolute bottom-0 left-0 z-20 flex w-[420px] max-w-[calc(100%-1rem)] flex-col bg-white">
-        <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-slate-50 px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
-          Logs
-        </div>
-        <div className="max-h-28 overflow-y-auto border-t border-border-subtle">
-          <LogsPanel />
-        </div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-72">{children}</div>
       </div>
     </div>
   )
