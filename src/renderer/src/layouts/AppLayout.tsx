@@ -55,12 +55,13 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
       {/* Sidebar now carries both page nav and a collapsible Logs section
           in one component (see Sidebar.tsx) - absolutely positioned, out
           of this flex row's layout flow so it can never stretch or be
-          squished by its sibling. pl-72 on the content pane reserves
-          enough left space (sidebar is w-64) so it doesn't sit on top of
-          the grid. */}
+          squished by its sibling. pl-44 on the content pane reserves
+          enough left space (sidebar is w-40) so it doesn't sit on top of
+          the grid - kept narrow since the grid's own responsiveness
+          (auto-fill column count) depends on how much width is left. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-72">{children}</div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-44">{children}</div>
       </div>
     </div>
   )

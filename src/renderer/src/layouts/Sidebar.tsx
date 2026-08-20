@@ -17,7 +17,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
   const [logsOn, setLogsOn] = useState(false)
 
   return (
-    <nav className="absolute inset-y-0 left-0 z-10 flex w-64 flex-col border-r border-border-subtle bg-slate-50">
+    <nav className="absolute inset-y-0 left-0 z-10 flex w-40 flex-col border-r border-border-subtle bg-slate-50">
       <div className="flex flex-col gap-1 p-2">
         {PAGES.map((page) => (
           <button
