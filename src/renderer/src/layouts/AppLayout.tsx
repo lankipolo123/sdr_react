@@ -15,7 +15,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
   const { status, statusText, connect, disconnect } = useConnection()
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-white text-text-dark">
+    <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
       {/* Frameless window - draggable title bar region, matching
           TitleBar/ResizableContainer in the reference app. Connection
           status + Connect button live here now instead of their own row -
@@ -60,14 +60,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           left space so the floating sidebar doesn't sit on top of it. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-32">{children}</div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-32 pb-36">{children}</div>
       </div>
 
-      {/* Logs only now - status/Connect moved to the title bar above.
-          "Logs" tab pokes up like a folder tab (rounded top corners, no
-          bottom border so it blends into the panel below) instead of a
-          plain top border across the whole section. */}
-      <div className="flex flex-col bg-white">
+      {/* Logs floats over the page the same way Sidebar does - absolute,
+          out of flow - just docked to the bottom instead of the
+          top-left, and stacked above it (z-20 > Sidebar's z-10) since
+          it's the higher-priority overlay for the main page. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
         <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
           Logs
         </div>
