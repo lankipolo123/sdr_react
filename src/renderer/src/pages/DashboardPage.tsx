@@ -1,3 +1,4 @@
+import { Plug, Radio, SignalHigh, History, type LucideIcon } from 'lucide-react'
 import { useAllChannels } from '../hooks/useAllChannels'
 import { useLogs } from '../contexts/LogsContext'
 import { useConnection } from '../contexts/ConnectionContext'
@@ -12,14 +13,18 @@ const STATUS_COLORS: Record<string, string> = {
 
 interface DashboardCardProps {
   title: string
+  icon: LucideIcon
   className?: string
   children: React.ReactNode
 }
 
-function DashboardCard({ title, className, children }: DashboardCardProps): React.JSX.Element {
+function DashboardCard({ title, icon: Icon, className, children }: DashboardCardProps): React.JSX.Element {
   return (
     <div className={`rounded-[10px] border border-border-subtle bg-white p-4 ${className ?? ''}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted-ref">{title}</div>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted-ref">
+        <Icon size={13} className="text-accent-blue" />
+        {title}
+      </div>
       {children}
     </div>
   )
@@ -48,7 +53,7 @@ export function DashboardPage(): React.JSX.Element {
       <h1 className="mb-3 text-sm font-semibold text-text-dark">Dashboard</h1>
 
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <DashboardCard title="Connection">
+        <DashboardCard title="Connection" icon={Plug}>
           <div className="mt-2 flex items-center gap-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: statusColor }} />
             <span className="text-sm font-semibold" style={{ color: statusColor }}>
@@ -58,7 +63,7 @@ export function DashboardPage(): React.JSX.Element {
           <div className="mt-1 truncate text-[10px] text-text-muted-ref">{statusText}</div>
         </DashboardCard>
 
-        <DashboardCard title="Active Channels">
+        <DashboardCard title="Active Channels" icon={Radio}>
           <div className="mt-2 text-2xl font-bold text-navy">
             {onCount}
             <span className="text-sm font-normal text-text-muted-ref"> / {MAX_CHANNELS}</span>
@@ -71,7 +76,7 @@ export function DashboardPage(): React.JSX.Element {
           </div>
         </DashboardCard>
 
-        <DashboardCard title="Signal Levels">
+        <DashboardCard title="Signal Levels" icon={SignalHigh}>
           <div className="mt-2 flex flex-col gap-1.5">
             {([0, 1, 2, 3] as Level[]).map((lvl) => (
               <div key={lvl} className="flex items-center gap-2 text-[11px]">
@@ -89,7 +94,7 @@ export function DashboardPage(): React.JSX.Element {
         </DashboardCard>
       </div>
 
-      <DashboardCard title="Recent Activity" className="mt-3">
+      <DashboardCard title="Recent Activity" icon={History} className="mt-3">
         {logs.length === 0 ? (
           <div className="mt-2 text-xs text-text-muted-ref">No commands sent yet.</div>
         ) : (
