@@ -15,7 +15,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
   const { status, statusText, connect, disconnect } = useConnection()
 
   return (
-    <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
+    <div className="relative flex h-screen w-screen flex-col bg-slate-50 text-text-dark">
       {/* Frameless window - draggable title bar region, matching
           TitleBar/ResizableContainer in the reference app. Connection
           status + Connect button live here now instead of their own row -

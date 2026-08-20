@@ -27,7 +27,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
   }
 
   return (
-    <nav className="fixed left-0 top-9 bottom-0 z-10 flex w-40 flex-col gap-2 border-r border-border-subtle bg-slate-50 p-2">
+    <nav className="fixed left-0 top-9 bottom-0 z-10 flex w-40 flex-col gap-2 border-r border-border-subtle bg-white p-2">
       {PAGES.map((page) => {
         const Icon = ICONS[page.icon]
         return (
