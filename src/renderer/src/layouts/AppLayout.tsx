@@ -22,7 +22,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           the button sits in a no-drag island so it stays clickable inside
           the draggable bar. */}
       <div
-        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white"
+        className="flex h-9 items-center justify-between gap-2 border-b border-border-subtle bg-navy px-3 text-xs text-white"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="font-semibold">TX Controller (React)</span>
