@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
 import { LogsPanel } from '../components/LogsPanel'
+import { cn } from '../lib/utils'
 import type { PageId } from './pages'
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed'
@@ -43,6 +44,19 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
     setStatusText(connected ? 'Connected' : `Not connected (${text ?? 'no response'})`)
   }
 
+  async function handleDisconnect(): Promise<void> {
+    setStatus('connecting')
+    setStatusText('Disconnecting…')
+    const { error } = await window.sdr.dll.disconnect()
+    if (error !== null) {
+      setStatus('failed')
+      setStatusText(`Error: ${error}`)
+      return
+    }
+    setStatus('idle')
+    setStatusText('Not connected yet.')
+  }
+
   return (
     <div className="flex h-screen w-screen flex-col bg-white text-text-dark">
       {/* Frameless window - draggable title bar region, matching
@@ -68,11 +82,16 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           <Button
             size="sm"
             variant="outline"
-            className={status === 'connected' ? 'border-status-ok bg-status-ok text-white hover:bg-status-ok/90' : undefined}
-            onClick={handleConnect}
+            className={cn(
+              'h-6 px-2 text-[10px]',
+              status === 'connected'
+                ? 'border-status-error bg-status-error text-white hover:bg-status-error/90'
+                : 'border-status-ok bg-status-ok text-white hover:bg-status-ok/90'
+            )}
+            onClick={status === 'connected' ? handleDisconnect : handleConnect}
             disabled={status === 'connecting'}
           >
-            {status === 'connected' ? 'Connected' : 'Connect'}
+            {status === 'connected' ? 'Disconnect' : 'Connect'}
           </Button>
         </div>
       </div>
