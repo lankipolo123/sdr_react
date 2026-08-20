@@ -52,9 +52,17 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
         isOn ? 'border-navy' : 'border-border-subtle'
       )}
     >
-      <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-text-dark">
-        <Radio size={13} className={isOn ? 'text-accent-blue' : 'text-text-muted-ref'} />
-        <span>CH{String(address).padStart(2, '0')}</span>
+      <div className="flex items-center justify-between px-1 text-xs font-semibold text-text-dark">
+        <div className="flex items-center gap-1.5">
+          <Radio size={13} className={isOn ? 'text-accent-blue' : 'text-text-muted-ref'} />
+          <span>CH{String(address).padStart(2, '0')}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusColor }} />
+          <span className="text-[10px] font-semibold" style={{ color: statusColor }}>
+            {statusText}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-1">
@@ -82,13 +90,6 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
       </div>
 
       <PowerButton checked={isOn} onChange={(checked) => (checked ? turnOn() : turnOff())} disabled={state.busy} />
-
-      <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusColor }} />
-        <span className="text-xs font-semibold" style={{ color: statusColor }}>
-          {statusText}
-        </span>
-      </div>
 
       <div className="flex flex-col gap-0.5 pt-1">
         <LevelSlider value={level} onValueChange={handleSliderChange} disabled={!isOn} />

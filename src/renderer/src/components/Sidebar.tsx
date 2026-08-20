@@ -50,7 +50,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
         type="button"
         onClick={() => setShowLogoutConfirm(true)}
         className={cn(
-          'mt-auto flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-status-error transition-colors hover:text-status-error/80',
+          'mt-auto flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white opacity-50 transition-colors hover:text-status-error hover:opacity-100',
           // Commands page floats its Logs box at z-[1000] along the
           // bottom of the window, covering the sidebar's lower portion
           // - reserve enough bottom margin here (sized to the Logs
