@@ -57,10 +57,13 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           this flex row's layout flow so it can never stretch, squish
           siblings, or leave a partial-looking border depending on
           content height. pl-32 on the content pane just reserves enough
-          left space so the floating sidebar doesn't sit on top of it. */}
+          left space so the floating sidebar doesn't sit on top of it. No
+          bottom reservation - the logs overlay is a small bottom-left
+          corner box now (see below), not worth losing this much grid
+          space over; it can sit on top of the last row when it's open. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-32 pb-36">{children}</div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-32">{children}</div>
       </div>
 
       {/* Logs floats over the page the same way Sidebar does - absolute,
