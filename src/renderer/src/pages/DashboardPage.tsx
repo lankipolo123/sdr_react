@@ -1,7 +1,7 @@
 import { useAllChannels } from '../hooks/useAllChannels'
 import { useLogs } from '../hooks/useLogs'
 import { useConnection } from '../contexts/ConnectionContext'
-import { LEVEL_LABELS, MAX_CHANNELS, MODE_NAMES, type Level } from '../../../main/protocol/constants'
+import { LEVEL_LABELS, MAX_CHANNELS, type Level } from '../../../main/protocol/constants'
 
 const STATUS_COLORS: Record<string, string> = {
   connected: '#087F23',
@@ -39,10 +39,6 @@ export function DashboardPage(): React.JSX.Element {
 
   const levelCounts: Record<Level, number> = { 0: 0, 1: 0, 2: 0, 3: 0 }
   for (const c of channels) levelCounts[c.level] += 1
-
-  const modeCounts = new Map<number, number>()
-  for (const c of channels) modeCounts.set(c.mode, (modeCounts.get(c.mode) ?? 0) + 1)
-  const sortedModes = Array.from(modeCounts.entries()).sort((a, b) => b[1] - a[1])
 
   const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.idle
   const statusLabel = status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Not Connected'
@@ -90,21 +86,6 @@ export function DashboardPage(): React.JSX.Element {
               </div>
             ))}
           </div>
-        </DashboardCard>
-
-        <DashboardCard title="Modes In Use">
-          {sortedModes.length === 0 ? (
-            <div className="mt-2 text-xs text-text-muted-ref">Loading…</div>
-          ) : (
-            <div className="mt-2 flex flex-col gap-1.5">
-              {sortedModes.map(([mode, count]) => (
-                <div key={mode} className="flex items-center justify-between gap-2 text-[11px]">
-                  <span className="truncate text-text-muted-ref">{MODE_NAMES[mode] ?? `Mode ${mode}`}</span>
-                  <span className="shrink-0 font-semibold text-text-dark">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </DashboardCard>
       </div>
 
