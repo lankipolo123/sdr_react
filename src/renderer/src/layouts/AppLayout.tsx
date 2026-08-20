@@ -69,7 +69,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="pl-44">{children}</div>
         {current !== 'logs' && (
-          <div className="relative z-20 flex flex-col">
+          <div className="relative z-20 flex flex-1 flex-col">
             <button
               type="button"
               onClick={() => setLogsOpen((open) => !open)}
@@ -78,7 +78,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
               Logs
             </button>
             {logsOpen && (
-              <div className="rounded-b-md border border-border-subtle bg-white">
+              <div className="flex-1 rounded-b-md border border-border-subtle bg-white">
                 <LogsPanel />
               </div>
             )}
