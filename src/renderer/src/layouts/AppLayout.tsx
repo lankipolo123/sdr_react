@@ -72,12 +72,12 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
               <button
                 type="button"
                 onClick={() => setLogsOpen((open) => !open)}
-                className="ml-4 w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
+                className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
               >
                 Logs
               </button>
               {logsOpen && (
-                <div className="mx-4 mb-4 max-h-40 overflow-y-auto rounded-b-md rounded-tr-md border border-border-subtle">
+                <div className="max-h-40 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
                   <LogsPanel />
                 </div>
               )}
