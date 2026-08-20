@@ -64,11 +64,12 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
       </div>
 
       {/* Logs floats over the page the same way Sidebar does - absolute,
-          out of flow - just docked to the bottom instead of the
-          top-left, and stacked above it (z-20 > Sidebar's z-10) since
-          it's the higher-priority overlay for the main page. */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
-        <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
+          out of flow - docked to the bottom-left, flush against the
+          sidebar's left edge, sized to its own content instead of
+          stretching the full window width. Stacked above the sidebar
+          (z-20 > Sidebar's z-10) since it's the higher-priority overlay. */}
+      <div className="absolute bottom-0 left-0 z-20 flex w-[420px] max-w-[calc(100%-1rem)] flex-col bg-white">
+        <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-slate-50 px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
           Logs
         </div>
         <div className="max-h-28 overflow-y-auto border-t border-border-subtle">
