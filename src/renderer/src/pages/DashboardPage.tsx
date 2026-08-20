@@ -1,5 +1,5 @@
 import { useAllChannels } from '../hooks/useAllChannels'
-import { useLogs } from '../hooks/useLogs'
+import { useLogs } from '../contexts/LogsContext'
 import { useConnection } from '../contexts/ConnectionContext'
 import { LEVEL_LABELS, MAX_CHANNELS, type Level } from '../../../main/protocol/constants'
 

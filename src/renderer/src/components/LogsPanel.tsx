@@ -1,4 +1,4 @@
-import { useLogs } from '../hooks/useLogs'
+import { useLogs } from '../contexts/LogsContext'
 
 // Shows only entry.sentTokens - the DLL-translated values that
 // CommandTokens/SendCommandToSDR actually transmitted. These are the

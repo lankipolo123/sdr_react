@@ -69,11 +69,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="pl-44">{children}</div>
         {current !== 'logs' && current !== 'dashboard' && (
-          <div className="relative z-[1000] flex flex-1 flex-col">
+          <div className="relative z-[1000] flex flex-col">
             <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
               Logs
             </div>
-            <div className="flex-1 rounded-b-md border border-border-subtle bg-white">
+            {/* min-h keeps at least ~3 rows visible even with few
+                entries; once entries grow past max-h, this scrolls on
+                its own instead of pushing the whole page. */}
+            <div className="min-h-[76px] max-h-56 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
               <LogsPanel />
             </div>
           </div>

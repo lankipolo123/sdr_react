@@ -1,4 +1,4 @@
-import { useLogs } from '../hooks/useLogs'
+import { useLogs } from '../contexts/LogsContext'
 
 // Full, dedicated log view - a proper table instead of the compact
 // single-line rows used for the small tab on ChannelsPage. Shows

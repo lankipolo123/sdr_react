@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AppLayout } from './layouts/AppLayout'
 import { ConnectionProvider } from './contexts/ConnectionContext'
+import { LogsProvider } from './contexts/LogsContext'
 import type { PageId } from './layouts/pages'
 import { ChannelsPage } from './pages/ChannelsPage'
 import { LogsPage } from './pages/LogsPage'
@@ -22,9 +23,11 @@ export function App(): React.JSX.Element {
 
   return (
     <ConnectionProvider>
-      <AppLayout current={page} onNavigate={setPage}>
-        {renderPage(page)}
-      </AppLayout>
+      <LogsProvider>
+        <AppLayout current={page} onNavigate={setPage}>
+          {renderPage(page)}
+        </AppLayout>
+      </LogsProvider>
     </ConnectionProvider>
   )
 }
