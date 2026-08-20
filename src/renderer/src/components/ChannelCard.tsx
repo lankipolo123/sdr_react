@@ -1,8 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { Button } from './ui/button'
+import { useEffect, useRef, useState } from 'react'
+import { PowerButton } from './ui/power-button'
 import { LevelSlider } from './ui/slider'
+import { cn } from '../lib/utils'
 import { useChannel } from '../hooks/useChannel'
 import { LEVEL_LABELS, MODE_NAMES, type Level } from '../../../main/protocol/constants'
+
+// Matches components/level_slider.py's SLIDER_SEND_DEBOUNCE_MS - avoids
+// firing a DLL send on every intermediate value while dragging.
+const SLIDER_SEND_DEBOUNCE_MS = 250
 
 interface ChannelCardProps {
   address: number
@@ -11,72 +16,99 @@ interface ChannelCardProps {
 export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
   const { state, turnOn, turnOff, setLevel, setMode } = useChannel(address)
 
+  // Mode selection is local/uncommitted until "Set" is clicked - matches
+  // the reference app's mode_combo + mode_set_btn exactly (selecting a
+  // mode does NOT apply it by itself).
+  const [selectedMode, setSelectedMode] = useState<number>(0)
+  useEffect(() => {
+    if (state !== null) setSelectedMode(state.mode)
+  }, [state?.mode])
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function handleSliderChange(value: number): void {
+    const level = value as Level
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setLevel(level), SLIDER_SEND_DEBOUNCE_MS)
+  }
+
   if (state === null) {
     return (
-      <Card className="w-56">
-        <CardContent className="p-4 text-sm text-muted-foreground">Loading CH{String(address).padStart(2, '0')}…</CardContent>
-      </Card>
+      <div className="w-[220px] rounded-[10px] border border-border-subtle bg-white p-3 text-xs text-text-muted-ref">
+        Loading CH{String(address).padStart(2, '0')}…
+      </div>
     )
   }
 
-  const statusColor = state.outputOn ? 'bg-green-500' : 'bg-muted-foreground/40'
-  const statusText = state.outputOn ? LEVEL_LABELS[state.level].toUpperCase() : 'STANDBY'
+  const isOn = state.outputOn
+  const level = state.level
+  const statusText = state.busy ? 'SENDING…' : isOn ? LEVEL_LABELS[level].toUpperCase() : 'STANDBY'
+  const statusColor = state.busy ? '#64AAFF' : isOn ? '#087F23' : '#6B7280'
 
   return (
-    <Card className="w-56">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>CH{String(address).padStart(2, '0')}</CardTitle>
-        <div className="flex items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${statusColor}`} />
-          <span className="text-xs font-medium text-muted-foreground">{statusText}</span>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <select
-            className="h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs"
-            value={state.mode}
-            onChange={(e) => setMode(Number(e.target.value))}
-          >
-            {Object.entries(MODE_NAMES).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+    <div
+      className={cn(
+        'flex w-[220px] flex-col gap-1 rounded-[10px] border bg-white p-2',
+        isOn ? 'border-accent-blue' : 'border-border-subtle'
+      )}
+    >
+      <div className="flex items-center gap-1.5 px-1 pb-1 text-xs font-semibold text-text-dark">
+        <span>CH{String(address).padStart(2, '0')}</span>
+      </div>
+
+      <div className="flex gap-1.5">
+        <div className="flex flex-1 flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <select
+              className={cn(
+                'h-6 flex-1 rounded-[7px] border border-border-subtle bg-white px-1.5 text-[10px] font-semibold',
+                isOn ? 'text-accent-blue' : 'text-text-muted-ref'
+              )}
+              value={selectedMode}
+              onChange={(e) => setSelectedMode(Number(e.target.value))}
+            >
+              {Object.entries(MODE_NAMES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="h-6 rounded-[7px] bg-navy px-1.5 text-[10px] font-semibold text-accent-blue"
+              onClick={() => setMode(selectedMode)}
+            >
+              Set
+            </button>
+          </div>
+
+          <PowerButton
+            checked={isOn}
+            onChange={(checked) => (checked ? turnOn() : turnOff())}
+            disabled={state.busy}
+          />
+
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: statusColor }} />
+            <span className="text-xs font-semibold" style={{ color: statusColor }}>
+              {statusText}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-6">
-          {/* Disabled until output is actually on (real hardware state,
-              not a UI toggle guess) - deliberate UX behavior to carry
-              over exactly, per the rewrite guide section 6. */}
-          <LevelSlider
-            value={state.level}
-            onValueChange={(v) => setLevel(v as Level)}
-            disabled={!state.outputOn}
-          />
-          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <div className="flex gap-1">
+          <LevelSlider value={level} onValueChange={handleSliderChange} disabled={!isOn} />
+          <div className="flex flex-col justify-between py-0.5 text-[11px]">
             {([3, 2, 1, 0] as Level[]).map((lvl) => (
-              <span key={lvl} className={state.level === lvl ? 'font-semibold text-foreground' : undefined}>
+              <span
+                key={lvl}
+                className={lvl === level ? 'font-bold text-accent-blue' : 'font-normal text-text-muted-ref'}
+              >
                 {LEVEL_LABELS[lvl]}
               </span>
             ))}
           </div>
         </div>
-
-        <Button
-          variant={state.outputOn ? 'destructive' : 'default'}
-          disabled={state.busy}
-          onClick={state.outputOn ? turnOff : turnOn}
-        >
-          {state.busy ? 'Sending…' : state.outputOn ? 'Power Off' : 'Activate'}
-        </Button>
-
-        <p className="truncate text-[11px] text-muted-foreground">
-          {state.lastCommand}
-          {state.lastCommandUnconfirmed && ' (unconfirmed)'}
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
