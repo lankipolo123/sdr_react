@@ -45,12 +45,29 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
   return (
     <div className="flex h-screen w-screen flex-col bg-white text-text-dark">
       {/* Frameless window - draggable title bar region, matching
-          TitleBar/ResizableContainer in the reference app. */}
+          TitleBar/ResizableContainer in the reference app. Connection
+          status + Connect button live here now instead of their own row -
+          the button sits in a no-drag island so it stays clickable inside
+          the draggable bar. */}
       <div
-        className="flex h-9 items-center justify-between bg-navy px-3 text-xs text-white"
+        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="font-semibold">TX Controller (React)</span>
+        <div
+          className="flex items-center gap-2"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              status === 'connected' ? 'bg-status-ok' : status === 'connecting' ? 'bg-warning-border' : 'bg-neutral-track'
+            }`}
+          />
+          <span className="max-w-[280px] truncate text-white/80">{statusText}</span>
+          <Button size="sm" variant="outline" onClick={handleConnect} disabled={status === 'connecting'}>
+            Connect
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -58,22 +75,11 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
       </div>
 
-      {/* Connection status + logs, docked to the bottom instead of a top
-          bar - status/Connect button share the row with LogsPanel, which
-          only ever shows DLL-translated sentTokens (never raw frame
-          bytes - see LogsPanel.tsx). */}
-      <div className="flex h-40 flex-col border-t border-border-subtle bg-white">
-        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle p-2 text-xs">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              status === 'connected' ? 'bg-status-ok' : status === 'connecting' ? 'bg-warning-border' : 'bg-neutral-track'
-            }`}
-          />
-          <span className="flex-1 truncate text-text-muted-ref">{statusText}</span>
-          <Button size="sm" variant="outline" onClick={handleConnect} disabled={status === 'connecting'}>
-            Connect
-          </Button>
-        </div>
+      {/* Logs only now - status/Connect moved to the title bar above.
+          Height trimmed to the actual row height instead of a fixed h-40
+          that left a lot of dead white space when there weren't many
+          entries yet. */}
+      <div className="flex h-28 flex-col border-t border-border-subtle bg-white">
         <LogsPanel />
       </div>
     </div>

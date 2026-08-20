@@ -48,7 +48,7 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
     <div
       className={cn(
         'flex w-full min-w-[180px] flex-col gap-1.5 rounded-[10px] border bg-white p-2',
-        isOn ? 'border-accent-blue' : 'border-border-subtle'
+        isOn ? 'border-navy' : 'border-border-subtle'
       )}
     >
       <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-text-dark">
@@ -72,7 +72,7 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
         </select>
         <button
           type="button"
-          className="h-6 shrink-0 rounded-[7px] bg-navy px-1.5 text-[10px] font-semibold text-accent-blue"
+          className="h-6 shrink-0 rounded-[7px] bg-navy px-1.5 text-[10px] font-semibold text-white"
           onClick={() => setMode(selectedMode)}
         >
           Set
