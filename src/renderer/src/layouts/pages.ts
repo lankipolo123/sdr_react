@@ -5,7 +5,8 @@
 // switch once they have real content.
 export const PAGES = [
   { id: 'channels', label: 'Channels', icon: 'grid' },
-  { id: 'logs', label: 'Logs', icon: 'list' }
+  { id: 'logs', label: 'Logs', icon: 'list' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'layout' }
 ] as const
 
 export type PageId = (typeof PAGES)[number]['id']

@@ -4,6 +4,7 @@ import { ConnectionProvider } from './contexts/ConnectionContext'
 import type { PageId } from './layouts/pages'
 import { ChannelsPage } from './pages/ChannelsPage'
 import { LogsPage } from './pages/LogsPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 function renderPage(page: PageId): React.JSX.Element {
   switch (page) {
@@ -11,6 +12,8 @@ function renderPage(page: PageId): React.JSX.Element {
       return <ChannelsPage />
     case 'logs':
       return <LogsPage />
+    case 'dashboard':
+      return <DashboardPage />
   }
 }
 
