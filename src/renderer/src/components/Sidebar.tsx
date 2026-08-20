@@ -1,4 +1,4 @@
-import { LayoutDashboard, LayoutGrid, List, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, List, SlidersHorizontal, type LucideIcon } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { PAGES, type PageId } from '../layouts/pages'
 
@@ -9,7 +9,7 @@ interface SidebarProps {
 
 const ICONS: Record<(typeof PAGES)[number]['icon'], LucideIcon> = {
   layout: LayoutDashboard,
-  grid: LayoutGrid,
+  sliders: SlidersHorizontal,
   list: List
 }
 
