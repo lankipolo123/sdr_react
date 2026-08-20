@@ -115,6 +115,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('logs:getPage', (_event, page: number, pageSize: number) => getLogPage(page, pageSize, logsPath))
 
+  // Triggers the normal window-all-closed path below (channel state
+  // save + controller disposal) rather than duplicating that logic -
+  // app.quit() closes every window first, which fires it naturally.
+  ipcMain.handle('app:quit', () => app.quit())
+
   createWindow()
 
   app.on('activate', () => {

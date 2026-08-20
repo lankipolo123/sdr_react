@@ -17,6 +17,9 @@ ipcRenderer.setMaxListeners(MAX_CHANNELS + 10)
 // ChannelController / state.changed signal pattern over IPC instead of
 // Qt signals.
 const api = {
+  app: {
+    quit: (): Promise<void> => ipcRenderer.invoke('app:quit')
+  },
   dll: {
     autoConnect: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:autoConnect'),
     checkConnection: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:checkConnection'),
