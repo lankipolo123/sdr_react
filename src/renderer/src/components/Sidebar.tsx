@@ -1,6 +1,6 @@
 import { LayoutDashboard, LayoutGrid, List, type LucideIcon } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { PAGES, type PageId } from './pages'
+import { PAGES, type PageId } from '../layouts/pages'
 
 interface SidebarProps {
   current: PageId

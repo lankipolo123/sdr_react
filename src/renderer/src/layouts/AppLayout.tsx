@@ -1,5 +1,5 @@
 import { Button } from '../components/ui/button'
-import { Sidebar } from './Sidebar'
+import { Sidebar } from '../components/Sidebar'
 import { LogsPanel } from '../components/LogsPanel'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
