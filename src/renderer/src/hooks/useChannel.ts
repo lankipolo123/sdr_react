@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ChannelState } from '../../../main/channelController'
 import type { Level } from '../../../main/protocol/constants'
+import { useConnection } from '../contexts/ConnectionContext'
 
 export function useChannel(address: number): {
   state: ChannelState | null
@@ -10,6 +11,7 @@ export function useChannel(address: number): {
   setMode: (mode: number) => void
 } {
   const [state, setState] = useState<ChannelState | null>(null)
+  const { requireConnected } = useConnection()
 
   useEffect(() => {
     let cancelled = false
@@ -26,22 +28,26 @@ export function useChannel(address: number): {
   }, [address])
 
   const turnOn = useCallback(() => {
+    if (!requireConnected()) return
     void window.sdr.channels.turnOn(address)
-  }, [address])
+  }, [address, requireConnected])
   const turnOff = useCallback(() => {
+    if (!requireConnected()) return
     void window.sdr.channels.turnOff(address)
-  }, [address])
+  }, [address, requireConnected])
   const setLevel = useCallback(
     (level: Level) => {
+      if (!requireConnected()) return
       void window.sdr.channels.setLevel(address, level)
     },
-    [address]
+    [address, requireConnected]
   )
   const setMode = useCallback(
     (mode: number) => {
+      if (!requireConnected()) return
       void window.sdr.channels.setMode(address, mode)
     },
-    [address]
+    [address, requireConnected]
   )
 
   return { state, turnOn, turnOff, setLevel, setMode }

@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
 import { LogsPanel } from '../components/LogsPanel'
 import { cn } from '../lib/utils'
+import { useConnection } from '../contexts/ConnectionContext'
 import type { PageId } from './pages'
-
-type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed'
 
 interface AppLayoutProps {
   current: PageId
@@ -14,48 +12,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
-  const [status, setStatus] = useState<ConnectionStatus>('idle')
-  const [statusText, setStatusText] = useState('Not connected yet.')
-
-  useEffect(() => {
-    window.sdr.dll.loadError().then((err) => {
-      if (err !== null) {
-        setStatus('failed')
-        setStatusText(`DLL failed to load: ${err}`)
-      }
-    })
-  }, [])
-
-  async function handleConnect(): Promise<void> {
-    setStatus('connecting')
-    setStatusText('Connecting…')
-    const { result, text, error } = await window.sdr.dll.autoConnect()
-    if (error !== null) {
-      setStatus('failed')
-      setStatusText(`Error: ${error}`)
-      return
-    }
-    // Confirmed on real hardware (32-bit DLL): attached -> returns 4,
-    // "Connected"; nothing attached -> returns -1, "DisConnected". Not
-    // yet re-verified against this x64 DLL - this is exactly the kind
-    // of call to check first against real hardware.
-    const connected = result !== null && result > 0
-    setStatus(connected ? 'connected' : 'failed')
-    setStatusText(connected ? 'Connected' : `Not connected (${text ?? 'no response'})`)
-  }
-
-  async function handleDisconnect(): Promise<void> {
-    setStatus('connecting')
-    setStatusText('Disconnecting…')
-    const { error } = await window.sdr.dll.disconnect()
-    if (error !== null) {
-      setStatus('failed')
-      setStatusText(`Error: ${error}`)
-      return
-    }
-    setStatus('idle')
-    setStatusText('Not connected yet.')
-  }
+  const { status, statusText, connect, disconnect } = useConnection()
 
   return (
     <div className="flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -88,7 +45,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
                 ? 'border-status-error bg-status-error text-white hover:bg-status-error/90'
                 : 'border-status-ok bg-status-ok text-white hover:bg-status-ok/90'
             )}
-            onClick={status === 'connected' ? handleDisconnect : handleConnect}
+            onClick={status === 'connected' ? disconnect : connect}
             disabled={status === 'connecting'}
           >
             {status === 'connected' ? 'Disconnect' : 'Connect'}
