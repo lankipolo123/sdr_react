@@ -14,7 +14,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
-  const [logsOpen, setLogsOpen] = useState(false)
+  const [logsOpen, setLogsOpen] = useState(true)
 
   return (
     <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -66,10 +66,12 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
 
       {/* Logs floats above the page (absolute, z-20 > Sidebar's z-10) so
           it never reflows or fights with the main/channels layout - same
-          idea as the sidebar. No padding reserved on the content pane
-          for it: closed, it's just the small tab in the corner; open, it
-          overlaps the bottom of the grid instead of pushing it. */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col bg-white">
+          idea as the sidebar. Open by default - no click needed to see
+          it. Sized to its own content (w-fit, not inset-x-0) instead of
+          always spanning the full window width, so with few/short
+          entries it doesn't leave a big empty horizontal gap; it grows
+          up to the window width as entries need more room. */}
+      <div className="absolute bottom-0 left-0 z-20 flex max-w-full flex-col bg-white">
         <button
           type="button"
           onClick={() => setLogsOpen((open) => !open)}
@@ -78,7 +80,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           Logs
         </button>
         {logsOpen && (
-          <div className="max-h-40 overflow-y-auto border-t border-border-subtle">
+          <div className="max-h-40 w-fit min-w-[280px] max-w-full overflow-auto border-t border-border-subtle">
             <LogsPanel />
           </div>
         )}
