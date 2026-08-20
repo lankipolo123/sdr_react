@@ -23,7 +23,14 @@ function createWindow(): void {
     height: 560,
     frame: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      // electron-vite builds preload as ESM (out/preload/index.mjs, not
+      // .js) because package.json has "type": "module" - referencing
+      // .js here silently fails to load the preload script at all
+      // (Electron just skips a preload path it can't find, no error
+      // surfaced to the renderer), which is why contextBridge never ran
+      // and window.sdr was undefined, crashing every component that
+      // touched it on mount.
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false
     }
   })
