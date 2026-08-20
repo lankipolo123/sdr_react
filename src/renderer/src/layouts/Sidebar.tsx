@@ -45,8 +45,12 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
         <span>{logsOn ? '▾' : '▸'}</span>
       </button>
 
+      {/* Flyout instead of an inline section - pops out to the right,
+          wide enough for the original single-line-per-entry log format,
+          without permanently widening the rail (and shrinking the grid's
+          available width / column count) just to fit it. */}
       {logsOn && (
-        <div className="max-h-64 overflow-y-auto border-t border-border-subtle bg-white">
+        <div className="absolute bottom-0 left-full max-h-64 w-[480px] overflow-y-auto border border-l-0 border-border-subtle bg-white">
           <LogsPanel />
         </div>
       )}
