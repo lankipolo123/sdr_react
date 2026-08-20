@@ -27,7 +27,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
   }
 
   return (
-    <nav className="fixed left-0 top-9 bottom-0 z-10 flex w-40 flex-col gap-2 border-r border-border-subtle bg-white p-2">
+    <nav className="fixed left-0 top-9 bottom-0 z-10 flex w-40 flex-col gap-2 bg-navy p-2">
       {PAGES.map((page) => {
         const Icon = ICONS[page.icon]
         return (
@@ -36,8 +36,8 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
             type="button"
             onClick={() => onNavigate(page.id)}
             className={cn(
-              'flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-wide transition-colors',
-              current === page.id ? 'text-accent-blue' : 'text-text-muted-ref hover:text-text-dark'
+              'flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white transition-opacity',
+              current === page.id ? 'opacity-100' : 'opacity-50 hover:opacity-80'
             )}
           >
             <Icon size={16} className="shrink-0" />
