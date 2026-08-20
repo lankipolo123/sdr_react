@@ -56,7 +56,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
           // - reserve enough bottom margin here (sized to the Logs
           // box's max height + tab) so Logout stays above it instead of
           // getting hidden underneath.
-          current === 'channels' && 'mb-64'
+          current === 'channels' && 'mb-32'
         )}
       >
         <LogOut size={16} className="shrink-0" />

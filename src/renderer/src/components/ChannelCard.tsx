@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Radio } from 'lucide-react'
 import { PowerButton } from './ui/power-button'
 import { LevelSlider } from './ui/slider'
 import { cn } from '../lib/utils'
@@ -52,6 +53,7 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
       )}
     >
       <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-text-dark">
+        <Radio size={13} className={isOn ? 'text-accent-blue' : 'text-text-muted-ref'} />
         <span>CH{String(address).padStart(2, '0')}</span>
       </div>
 
