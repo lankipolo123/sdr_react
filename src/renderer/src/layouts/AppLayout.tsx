@@ -55,23 +55,17 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Sidebar is absolutely positioned (see Sidebar.tsx), out of this
-          flex row's layout flow so it can never stretch or be squished.
-          pl-44 on the content pane reserves enough left space (sidebar
-          is w-40) so it doesn't sit on top of the grid. */}
+      {/* Three self-contained panels: Sidebar (1) and the content pane
+          (3) side by side, Logs (2) as a full-width bar underneath both,
+          absolutely positioned with a high z-index so it always sits on
+          top regardless of what's under it - no ambiguity about
+          stacking order against the sidebar or the grid. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="flex flex-1 flex-col overflow-hidden pl-44">{children}</div>
       </div>
 
-      {/* Logs floats above the page (absolute, z-20 > Sidebar's z-10) so
-          it never reflows or fights with the main/channels layout - same
-          idea as the sidebar. Open by default - no click needed. Two
-          separately-sized pieces: the tab is its own small w-fit
-          component; the content row below it is full window width
-          (inset-x-0 on the wrapper) so log lines have the room they
-          need instead of being squeezed into a content-sized box. */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col bg-white">
+      <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col">
         <button
           type="button"
           onClick={() => setLogsOpen((open) => !open)}
@@ -80,7 +74,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           Logs
         </button>
         {logsOpen && (
-          <div className="max-h-40 overflow-y-auto border-t border-border-subtle">
+          <div className="max-h-40 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
             <LogsPanel />
           </div>
         )}

@@ -3,6 +3,9 @@
 // sdr_controller's sidebar.py PAGES pattern. Only "channels" is real
 // right now; more entries just need a case added in AppLayout's page
 // switch once they have real content.
-export const PAGES = [{ id: 'channels', label: 'Channels', icon: 'grid' }] as const
+export const PAGES = [
+  { id: 'channels', label: 'Channels', icon: 'grid' },
+  { id: 'logs', label: 'Logs', icon: 'list' }
+] as const
 
 export type PageId = (typeof PAGES)[number]['id']
