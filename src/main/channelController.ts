@@ -20,6 +20,7 @@ export interface ChannelState {
   busy: boolean
   lastCommand: string
   lastCommandUnconfirmed: boolean
+  lastFrameHex: string // the actual bytes sent, e.g. "7E 7E 01 05 01 01 0A 0D"
 }
 
 function initialState(address: number): ChannelState {
@@ -31,7 +32,8 @@ function initialState(address: number): ChannelState {
     lastLevel: 1,
     busy: false,
     lastCommand: '—',
-    lastCommandUnconfirmed: false
+    lastCommandUnconfirmed: false,
+    lastFrameHex: '—'
   }
 }
 
@@ -92,7 +94,8 @@ export class ChannelController extends EventEmitter {
   }
 
   private send(frame: Buffer, label: string, applyOnSettle: Partial<ChannelState>): void {
-    this.update({ busy: true, lastCommand: label })
+    const frameHex = frame.toString('hex').toUpperCase().match(/../g)!.join(' ')
+    this.update({ busy: true, lastCommand: label, lastFrameHex: frameHex })
     this.scheduler.acquire(this, () => {
       const { error } = dllSendFrame(frame)
       // Single attempt, no retry (final tuned behavior - see module
