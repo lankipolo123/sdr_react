@@ -64,13 +64,12 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <div className="flex flex-1 flex-col overflow-hidden pl-44">{children}</div>
       </div>
 
-      {/* Logs: back to a normal (non-absolute) flex-column sibling, full
-          window width, so it participates in layout instead of needing
-          manual space reservations. Closed, it's just the folder tab -
-          costs nothing. Open, it grows to fit its content up to a max
-          height (scrolls beyond that) - the grid above shrinks to make
-          room automatically since it's flex-1, no hardcoded padding. */}
-      <div className="flex flex-col bg-white">
+      {/* Logs floats above the page (absolute, z-20 > Sidebar's z-10) so
+          it never reflows or fights with the main/channels layout - same
+          idea as the sidebar. No padding reserved on the content pane
+          for it: closed, it's just the small tab in the corner; open, it
+          overlaps the bottom of the grid instead of pushing it. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col bg-white">
         <button
           type="button"
           onClick={() => setLogsOpen((open) => !open)}
