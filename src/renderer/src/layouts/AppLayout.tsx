@@ -38,8 +38,9 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
     // "Connected"; nothing attached -> returns -1, "DisConnected". Not
     // yet re-verified against this x64 DLL - this is exactly the kind
     // of call to check first against real hardware.
-    setStatus(result !== null && result > 0 ? 'connected' : 'failed')
-    setStatusText(`result=${result} text="${text}"`)
+    const connected = result !== null && result > 0
+    setStatus(connected ? 'connected' : 'failed')
+    setStatusText(connected ? 'Connected' : `Not connected (${text ?? 'no response'})`)
   }
 
   return (
@@ -64,8 +65,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
             }`}
           />
           <span className="max-w-[280px] truncate text-white/80">{statusText}</span>
-          <Button size="sm" variant="outline" onClick={handleConnect} disabled={status === 'connecting'}>
-            Connect
+          <Button
+            size="sm"
+            variant="outline"
+            className={status === 'connected' ? 'border-status-ok bg-status-ok text-white hover:bg-status-ok/90' : undefined}
+            onClick={handleConnect}
+            disabled={status === 'connecting'}
+          >
+            {status === 'connected' ? 'Connected' : 'Connect'}
           </Button>
         </div>
       </div>
