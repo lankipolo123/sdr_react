@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ChannelState } from '../main/channelController'
+import type { ChannelState, LogEntry } from '../main/channelController'
 import type { Level } from '../main/protocol/constants'
 import type { DllCallResult } from '../main/dll/transit'
 
@@ -27,6 +27,16 @@ const api = {
       const listener = (_event: Electron.IpcRendererEvent, state: ChannelState): void => callback(state)
       ipcRenderer.on('channel:changed', listener)
       return () => ipcRenderer.removeListener('channel:changed', listener)
+    }
+  },
+  logs: {
+    // entry.sentTokens is the only "what was sent" data ever exposed to
+    // the renderer - the DLL-translated values, safe to show. Raw frame
+    // bytes are never part of this or any other IPC payload.
+    onEntry: (callback: (entry: LogEntry) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, entry: LogEntry): void => callback(entry)
+      ipcRenderer.on('log:entry', listener)
+      return () => ipcRenderer.removeListener('log:entry', listener)
     }
   }
 }

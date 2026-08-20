@@ -148,6 +148,19 @@ export function dllCommandTokens(byte: number): { token: string | null; error: s
   }
 }
 
+export interface SendFrameResult {
+  result: number | null
+  error: string | null
+  // The DLL-translated values actually handed to SendCommandToSDR, one
+  // per byte of frameBytes, in order (e.g. "XME" for 0x7E). This is the
+  // SAFE, intended-to-be-visible representation - the whole point of
+  // routing through CommandTokens is to substitute the real protocol
+  // bytes with these opaque values before anything is shown or
+  // transmitted. Never expose the frame's own logical/raw bytes
+  // anywhere they'd be visible - only these translated tokens.
+  sentTokens: string[]
+}
+
 /**
  * Sends one full frame, one byte at a time - confirmed real mechanism
  * (see the handoff guide): neither DLL function processes more than one
@@ -159,25 +172,24 @@ export function dllCommandTokens(byte: number): { token: string | null; error: s
  *
  * Returns only the last SendCommandToSDR return value - the DLL has no
  * confirmed way to report a real hardware acknowledgment, so every send
- * here is fire-and-forget from this bridge's point of view. Deliberately
- * does NOT return the per-byte translated values it sends - those (and
- * the frame's own logical bytes) are confidential and must never cross
- * into anything that reaches the renderer/UI.
+ * here is fire-and-forget from this bridge's point of view.
  */
-export function dllSendFrame(frameBytes: Buffer): { result: number | null; error: string | null } {
+export function dllSendFrame(frameBytes: Buffer): SendFrameResult {
   const f = getFns()
-  if (f === null) return { result: null, error: loadError }
+  if (f === null) return { result: null, error: loadError, sentTokens: [] }
   let result: number | null = null
+  const sentTokens: string[] = []
   try {
     for (const byte of frameBytes) {
       const { token, error } = dllCommandTokens(byte)
-      if (error !== null) return { result: null, error }
+      if (error !== null) return { result: null, error, sentTokens }
       const hex = byte.toString(16).toUpperCase().padStart(2, '0')
       const sendText = token === '??' || token === null ? hex : token
+      sentTokens.push(sendText)
       result = f.SendCommandToSDR(Buffer.from(sendText + '\0', 'ascii'), sendText.length)
     }
-    return { result, error: null }
+    return { result, error: null, sentTokens }
   } catch (e) {
-    return { result: null, error: e instanceof Error ? e.message : String(e) }
+    return { result: null, error: e instanceof Error ? e.message : String(e), sentTokens }
   }
 }

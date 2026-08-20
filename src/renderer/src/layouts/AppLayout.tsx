@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
+import { LogsPanel } from '../components/LogsPanel'
 import type { PageId } from './pages'
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed'
@@ -52,24 +53,28 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <span className="font-semibold">TX Controller (React)</span>
       </div>
 
-      {/* Connection status is global/persistent chrome, not per-page -
-          full Query diagnostic dialog + Logs panel from the reference
-          app's ControlsBar/LogsPanel are not built yet. */}
-      <div className="flex items-center gap-2 border-b border-border-subtle p-3 text-xs">
-        <span
-          className={`h-2 w-2 rounded-full ${
-            status === 'connected' ? 'bg-status-ok' : status === 'connecting' ? 'bg-warning-border' : 'bg-neutral-track'
-          }`}
-        />
-        <span className="flex-1 truncate text-text-muted-ref">{statusText}</span>
-        <Button size="sm" variant="outline" onClick={handleConnect} disabled={status === 'connecting'}>
-          Connect
-        </Button>
-      </div>
-
       <div className="flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+      </div>
+
+      {/* Connection status + logs, docked to the bottom instead of a top
+          bar - status/Connect button share the row with LogsPanel, which
+          only ever shows DLL-translated sentTokens (never raw frame
+          bytes - see LogsPanel.tsx). */}
+      <div className="flex h-40 flex-col border-t border-border-subtle bg-white">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle p-2 text-xs">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              status === 'connected' ? 'bg-status-ok' : status === 'connecting' ? 'bg-warning-border' : 'bg-neutral-track'
+            }`}
+          />
+          <span className="flex-1 truncate text-text-muted-ref">{statusText}</span>
+          <Button size="sm" variant="outline" onClick={handleConnect} disabled={status === 'connecting'}>
+            Connect
+          </Button>
+        </div>
+        <LogsPanel />
       </div>
     </div>
   )

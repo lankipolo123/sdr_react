@@ -20,14 +20,20 @@ export interface ChannelState {
   busy: boolean
   lastCommand: string
   lastCommandUnconfirmed: boolean
-  // Deliberately NOT exposing raw frame bytes or the DLL-translated
-  // values sent to SendCommandToSDR anywhere in this state object.
-  // ChannelState is broadcast wholesale to the renderer over IPC, and
-  // the renderer is DevTools-inspectable - the whole reason commands
-  // go through CommandTokens/SendCommandToSDR instead of being sent as
-  // raw protocol bytes is to keep those values opaque. lastCommand
-  // stays a human label describing the ACTION taken (e.g. "Level -> 2")
-  // never the wire-level representation of it.
+  // Deliberately NOT exposing the frame's raw/logical protocol bytes
+  // anywhere in this state object - those must never be visible. The
+  // DLL-translated values (what CommandTokens/SendCommandToSDR actually
+  // transmit) ARE safe/intended to be visible - that substitution is
+  // the whole point of routing through the DLL instead of sending raw
+  // bytes - but they're emitted separately via the 'log' event, not
+  // included in this per-channel state object.
+}
+
+export interface LogEntry {
+  address: number
+  label: string
+  sentTokens: string[]
+  timestamp: number
 }
 
 function initialState(address: number): ChannelState {
@@ -102,11 +108,11 @@ export class ChannelController extends EventEmitter {
   private send(frame: Buffer, label: string, applyOnSettle: Partial<ChannelState>): void {
     this.update({ busy: true, lastCommand: label })
     this.scheduler.acquire(this, () => {
-      // frame (the logical protocol bytes) and dllSendFrame's own
-      // sentTokens (the real per-byte values transmitted through
-      // SendCommandToSDR) both stay confined to this function - never
-      // added to `this.state`, which is broadcast to the renderer.
-      const { error } = dllSendFrame(frame)
+      // frame itself (the raw/logical protocol bytes) stays confined to
+      // this function and is never emitted anywhere - only
+      // dllSendFrame's sentTokens (the safe, DLL-translated values) get
+      // published, via the 'log' event below, never via `this.state`.
+      const { error, sentTokens } = dllSendFrame(frame)
       // Single attempt, no retry (final tuned behavior - see module
       // docstring). Settle delay paces sends and gives the "applied
       // optimistically" label time to mean something, rather than
@@ -119,6 +125,12 @@ export class ChannelController extends EventEmitter {
           lastCommandUnconfirmed: true,
           ...(error !== null ? { lastCommand: `${label} - DLL error: ${error}` } : {})
         })
+        this.emit('log', {
+          address: this.address,
+          label: error !== null ? `${label} - DLL error: ${error}` : label,
+          sentTokens,
+          timestamp: Date.now()
+        } satisfies LogEntry)
       }, SEND_SETTLE_MS)
     })
   }

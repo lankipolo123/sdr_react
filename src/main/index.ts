@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { PortScheduler } from './portScheduler'
-import { ChannelController, type ChannelState } from './channelController'
+import { ChannelController, type ChannelState, type LogEntry } from './channelController'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
 import { MAX_CHANNELS, type Level } from './protocol/constants'
 
@@ -20,6 +20,13 @@ for (let address = 1; address <= MAX_CHANNELS; address++) {
 
 function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void {
   win.webContents.send('channel:changed', state)
+}
+
+// LogEntry carries only sentTokens (the DLL-translated, safe-to-show
+// values) - never the raw frame bytes, which never leave
+// channelController.ts's private send(). Safe to broadcast wholesale.
+function broadcastLogEntry(win: BrowserWindow, entry: LogEntry): void {
+  win.webContents.send('log:entry', entry)
 }
 
 function createWindow(): void {
@@ -51,6 +58,7 @@ function createWindow(): void {
 
   for (const controller of channels.values()) {
     controller.on('changed', (state: ChannelState) => broadcastChannelChanged(win, state))
+    controller.on('log', (entry: LogEntry) => broadcastLogEntry(win, entry))
   }
 
   if (process.env.ELECTRON_RENDERER_URL) {
