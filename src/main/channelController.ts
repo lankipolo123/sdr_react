@@ -3,6 +3,7 @@ import { PortScheduler } from './portScheduler'
 import { dllSendFrame } from './dll/transit'
 import { buildOutputSwitch, buildSignalControl } from './protocol/frame'
 import { LEVEL_TO_POWER_CODE, MODE_WHITE_NOISE, type Level } from './protocol/constants'
+import type { SavedChannelState } from './channelStore'
 
 // Hardware-tuned final values from the reference app (see rewrite
 // guide section 5): RS422 here is a shared bus with no tri-state
@@ -36,13 +37,19 @@ export interface LogEntry {
   timestamp: number
 }
 
-function initialState(address: number): ChannelState {
+// saved comes from channels.ini (see channelStore.ts) - restores what
+// the app last knew about this channel across a restart. It only
+// seeds the in-memory/UI state; nothing here sends to the DLL, since
+// the hardware isn't connected yet at construction time.
+function initialState(address: number, saved?: SavedChannelState): ChannelState {
+  const lastLevel = saved?.lastLevel ?? 1
+  const outputOn = saved?.outputOn ?? false
   return {
     address,
-    outputOn: false,
-    level: 0,
-    mode: MODE_WHITE_NOISE,
-    lastLevel: 1,
+    outputOn,
+    level: outputOn ? lastLevel : 0,
+    mode: saved?.mode ?? MODE_WHITE_NOISE,
+    lastLevel,
     busy: false,
     lastCommand: '—',
     lastCommandUnconfirmed: false
@@ -55,11 +62,12 @@ export class ChannelController extends EventEmitter {
 
   constructor(
     address: number,
-    private scheduler: PortScheduler
+    private scheduler: PortScheduler,
+    saved?: SavedChannelState
   ) {
     super()
     this.address = address
-    this.state = initialState(address)
+    this.state = initialState(address, saved)
   }
 
   getState(): ChannelState {

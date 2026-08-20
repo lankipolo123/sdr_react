@@ -2,8 +2,17 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { PortScheduler } from './portScheduler'
 import { ChannelController, type ChannelState, type LogEntry } from './channelController'
+import { loadChannelStates, saveChannelStates } from './channelStore'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
 import { MAX_CHANNELS, type Level } from './protocol/constants'
+
+// Direct port of the reference app's channels.ini persistence (see
+// channelStore.ts) - remembers each channel's last mode/level/output
+// state across restarts. Lives under Electron's own userData dir
+// rather than alongside the app bundle, matching the reference app's
+// own user_data_dir() convention.
+const channelsIniPath = join(app.getPath('userData'), 'config', 'channels.ini')
+const savedChannelStates = loadChannelStates(channelsIniPath)
 
 // All 16 channels live from launch - matches the reference app's own
 // "blind send" architecture (main_page.py: `for address in
@@ -15,7 +24,7 @@ import { MAX_CHANNELS, type Level } from './protocol/constants'
 const scheduler = new PortScheduler()
 const channels = new Map<number, ChannelController>()
 for (let address = 1; address <= MAX_CHANNELS; address++) {
-  channels.set(address, new ChannelController(address, scheduler))
+  channels.set(address, new ChannelController(address, scheduler, savedChannelStates.get(address)))
 }
 
 function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void {
@@ -101,6 +110,10 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  saveChannelStates(
+    Array.from(channels.values()).map((controller) => controller.getState()),
+    channelsIniPath
+  )
   for (const controller of channels.values()) controller.dispose()
   if (process.platform !== 'darwin') app.quit()
 })
