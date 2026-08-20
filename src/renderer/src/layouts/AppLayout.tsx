@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from './Sidebar'
+import { LogsPanel } from '../components/LogsPanel'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
 import type { PageId } from './pages'
@@ -12,6 +14,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
+  const [logsOpen, setLogsOpen] = useState(false)
 
   return (
     <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -52,16 +55,34 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Sidebar now carries both page nav and a collapsible Logs section
-          in one component (see Sidebar.tsx) - absolutely positioned, out
-          of this flex row's layout flow so it can never stretch or be
-          squished by its sibling. pl-44 on the content pane reserves
-          enough left space (sidebar is w-40) so it doesn't sit on top of
-          the grid - kept narrow since the grid's own responsiveness
-          (auto-fill column count) depends on how much width is left. */}
+      {/* Sidebar is absolutely positioned (see Sidebar.tsx), out of this
+          flex row's layout flow so it can never stretch or be squished.
+          pl-44 on the content pane reserves enough left space (sidebar
+          is w-40) so it doesn't sit on top of the grid. */}
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="flex flex-1 flex-col overflow-hidden pl-44">{children}</div>
+      </div>
+
+      {/* Logs: back to a normal (non-absolute) flex-column sibling, full
+          window width, so it participates in layout instead of needing
+          manual space reservations. Closed, it's just the folder tab -
+          costs nothing. Open, it grows to fit its content up to a max
+          height (scrolls beyond that) - the grid above shrinks to make
+          room automatically since it's flex-1, no hardcoded padding. */}
+      <div className="flex flex-col bg-white">
+        <button
+          type="button"
+          onClick={() => setLogsOpen((open) => !open)}
+          className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
+        >
+          Logs
+        </button>
+        {logsOpen && (
+          <div className="max-h-40 overflow-y-auto border-t border-border-subtle">
+            <LogsPanel />
+          </div>
+        )}
       </div>
     </div>
   )
