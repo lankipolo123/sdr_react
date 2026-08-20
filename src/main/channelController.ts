@@ -4,6 +4,10 @@ import { dllSendFrame } from './dll/transit'
 import { buildOutputSwitch, buildSignalControl } from './protocol/frame'
 import { LEVEL_TO_POWER_CODE, MODE_WHITE_NOISE, type Level } from './protocol/constants'
 
+function toHexString(frame: Buffer): string {
+  return frame.toString('hex').toUpperCase().match(/../g)!.join(' ')
+}
+
 // Hardware-tuned final values from the reference app (see rewrite
 // guide section 5): RS422 here is a shared bus with no tri-state
 // control, so silence on a send is genuinely ambiguous - not a clean
@@ -20,7 +24,8 @@ export interface ChannelState {
   busy: boolean
   lastCommand: string
   lastCommandUnconfirmed: boolean
-  lastFrameHex: string // the actual bytes sent, e.g. "7E 7E 01 05 01 01 0A 0D"
+  lastFrameHex: string // the LOGICAL protocol bytes, e.g. "7E 7E 01 05 01 01 0A 0D" - NOT what's literally transmitted, see lastSentTokens
+  lastSentTokens: string // what actually went into SendCommandToSDR, one CommandTokens-translated entry per byte, e.g. "XME XME X#A X#A X#A X#A X#J X#M"
 }
 
 function initialState(address: number): ChannelState {
@@ -33,7 +38,8 @@ function initialState(address: number): ChannelState {
     busy: false,
     lastCommand: '—',
     lastCommandUnconfirmed: false,
-    lastFrameHex: '—'
+    lastFrameHex: '—',
+    lastSentTokens: '—'
   }
 }
 
@@ -94,10 +100,14 @@ export class ChannelController extends EventEmitter {
   }
 
   private send(frame: Buffer, label: string, applyOnSettle: Partial<ChannelState>): void {
-    const frameHex = frame.toString('hex').toUpperCase().match(/../g)!.join(' ')
-    this.update({ busy: true, lastCommand: label, lastFrameHex: frameHex })
+    // lastFrameHex is the LOGICAL protocol bytes - known immediately,
+    // but not what's literally transmitted (CommandTokens translates
+    // each byte before SendCommandToSDR ever sees it - see
+    // dllSendFrame's own docs). lastSentTokens (the real translated
+    // values) is only known after the DLL call actually runs below.
+    this.update({ busy: true, lastCommand: label, lastFrameHex: toHexString(frame) })
     this.scheduler.acquire(this, () => {
-      const { error } = dllSendFrame(frame)
+      const { error, sentTokens } = dllSendFrame(frame)
       // Single attempt, no retry (final tuned behavior - see module
       // docstring). Settle delay paces sends and gives the "applied
       // optimistically" label time to mean something, rather than
@@ -108,6 +118,7 @@ export class ChannelController extends EventEmitter {
           ...applyOnSettle,
           busy: false,
           lastCommandUnconfirmed: true,
+          lastSentTokens: sentTokens.length > 0 ? sentTokens.join(' ') : this.state.lastSentTokens,
           ...(error !== null ? { lastCommand: `${label} - DLL error: ${error}` } : {})
         })
       }, SEND_SETTLE_MS)

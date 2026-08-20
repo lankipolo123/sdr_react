@@ -99,15 +99,21 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
         </div>
       </div>
 
-      {/* The actual bytes sent for the last command - not part of the
-          reference app's per-card UI (it uses a separate global Logs
-          panel), added per request. */}
-      <div
-        className="truncate rounded-[6px] bg-border-subtle/40 px-1.5 py-1 font-mono text-[9px] text-text-muted-ref"
-        title={state.lastFrameHex}
-      >
-        TX: {state.lastFrameHex}
-        {state.lastCommandUnconfirmed && ' (unconfirmed)'}
+      {/* The last command sent - not part of the reference app's
+          per-card UI (it uses a separate global Logs panel), added per
+          request. Two lines on purpose: the DLL translates every byte
+          through CommandTokens before it's transmitted (e.g. HEAD
+          0x7E 0x7E is actually sent as the token "XME" twice, never
+          the literal string "7E 7E"), so showing only the logical
+          frame bytes would misrepresent what really went out. */}
+      <div className="flex flex-col gap-0.5 rounded-[6px] bg-border-subtle/40 px-1.5 py-1 font-mono text-[9px] text-text-muted-ref">
+        <div className="truncate" title={state.lastFrameHex}>
+          Frame: {state.lastFrameHex}
+        </div>
+        <div className="truncate" title={state.lastSentTokens}>
+          Sent: {state.lastSentTokens}
+          {state.lastCommandUnconfirmed && ' (unconfirmed)'}
+        </div>
       </div>
     </div>
   )
