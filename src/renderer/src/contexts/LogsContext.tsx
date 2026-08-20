@@ -1,9 +1,14 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { LogEntry } from '../../../main/channelController'
 
 const MAX_ENTRIES = 200
 
-const LogsContext = createContext<LogEntry[] | null>(null)
+interface LogsContextValue {
+  entries: LogEntry[]
+  clearLogs: () => void
+}
+
+const LogsContext = createContext<LogsContextValue | null>(null)
 
 // Single subscription for the whole app, mounted once at the root -
 // the corner Logs box, the dedicated Logs page, and the Dashboard's
@@ -24,11 +29,19 @@ export function LogsProvider({ children }: { children: ReactNode }): React.JSX.E
     return unsubscribe
   }, [])
 
-  return <LogsContext.Provider value={entries}>{children}</LogsContext.Provider>
+  const clearLogs = useCallback(() => setEntries([]), [])
+
+  return <LogsContext.Provider value={{ entries, clearLogs }}>{children}</LogsContext.Provider>
 }
 
 export function useLogs(): LogEntry[] {
-  const entries = useContext(LogsContext)
-  if (entries === null) throw new Error('useLogs must be used within a LogsProvider')
-  return entries
+  const ctx = useContext(LogsContext)
+  if (ctx === null) throw new Error('useLogs must be used within a LogsProvider')
+  return ctx.entries
+}
+
+export function useClearLogs(): () => void {
+  const ctx = useContext(LogsContext)
+  if (ctx === null) throw new Error('useClearLogs must be used within a LogsProvider')
+  return ctx.clearLogs
 }

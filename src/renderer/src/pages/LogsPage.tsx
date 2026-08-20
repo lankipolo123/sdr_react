@@ -1,4 +1,4 @@
-import { useLogs } from '../contexts/LogsContext'
+import { useLogs, useClearLogs } from '../contexts/LogsContext'
 
 // Full, dedicated log view - a proper table instead of the compact
 // single-line rows used for the small tab on ChannelsPage. Shows
@@ -6,6 +6,7 @@ import { useLogs } from '../contexts/LogsContext'
 // same rule as everywhere else logs are displayed.
 export function LogsPage(): React.JSX.Element {
   const entries = useLogs()
+  const clearLogs = useClearLogs()
 
   return (
     <div className="p-4">
@@ -15,11 +16,11 @@ export function LogsPage(): React.JSX.Element {
       </div>
 
       {entries.length === 0 ? (
-        <div className="rounded-md border border-border-subtle bg-white p-8 text-center text-xs text-text-muted-ref">
+        <div className="rounded-md border border-navy bg-white p-8 text-center text-xs text-text-muted-ref">
           No commands sent yet.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border-subtle bg-white">
+        <div className="overflow-hidden rounded-md border border-navy bg-white">
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-border-subtle bg-slate-50 text-left text-[10px] font-semibold uppercase tracking-wide text-text-muted-ref">
@@ -49,6 +50,15 @@ export function LogsPage(): React.JSX.Element {
           </table>
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={clearLogs}
+        disabled={entries.length === 0}
+        className="mt-3 rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy/90 disabled:pointer-events-none disabled:opacity-50"
+      >
+        Clear Log
+      </button>
     </div>
   )
 }
