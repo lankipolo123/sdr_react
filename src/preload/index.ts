@@ -1,7 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ChannelState, LogEntry } from '../main/channelController'
-import type { Level } from '../main/protocol/constants'
+import { MAX_CHANNELS, type Level } from '../main/protocol/constants'
 import type { DllCallResult } from '../main/dll/transit'
+
+// Every channel card mounts its own onChanged listener on the shared
+// 'channel:changed' IPC event (16 of them, one per channel) - legitimate
+// fan-out, not a leak, but it trips Node's default 10-listener cap and
+// logs a false-positive MaxListenersExceededWarning. Give it enough
+// headroom for all channels plus normal one-off listeners.
+ipcRenderer.setMaxListeners(MAX_CHANNELS + 10)
 
 // Renderer never touches the DLL or serial layer directly - only the
 // main process does. This is the one, small, typed surface the
