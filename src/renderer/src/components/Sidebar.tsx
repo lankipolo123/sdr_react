@@ -24,10 +24,8 @@ export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Elemen
             type="button"
             onClick={() => onNavigate(page.id)}
             className={cn(
-              'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] font-semibold transition-colors',
-              current === page.id
-                ? 'bg-accent-blue/10 text-accent-blue'
-                : 'text-text-muted-ref hover:bg-border-subtle/50'
+              'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide transition-colors',
+              current === page.id ? 'text-accent-blue' : 'text-text-muted-ref hover:text-text-dark'
             )}
           >
             <Icon size={14} className="shrink-0" />

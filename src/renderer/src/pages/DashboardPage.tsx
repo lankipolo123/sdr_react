@@ -98,7 +98,8 @@ export function DashboardPage(): React.JSX.Element {
               <div key={`${entry.timestamp}-${i}`} className="flex gap-2">
                 <span className="shrink-0 text-text-muted-ref">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                 <span className="shrink-0 font-semibold text-accent-blue">CH{String(entry.address).padStart(2, '0')}</span>
-                <span className="truncate text-text-dark">{entry.label}</span>
+                <span className="shrink-0 text-text-dark">{entry.label}</span>
+                <span className="truncate text-text-muted-ref">{entry.sentTokens.join(' ')}</span>
               </div>
             ))}
           </div>

@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useLogs, useClearLogs } from '../contexts/LogsContext'
+
+const PAGE_SIZE = 15
 
 // Full, dedicated log view - a proper table instead of the compact
 // single-line rows used for the small tab on ChannelsPage. Shows
@@ -7,6 +10,11 @@ import { useLogs, useClearLogs } from '../contexts/LogsContext'
 export function LogsPage(): React.JSX.Element {
   const entries = useLogs()
   const clearLogs = useClearLogs()
+  const [page, setPage] = useState(0)
+
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages - 1)
+  const pageEntries = entries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE)
 
   return (
     <div className="p-4">
@@ -31,7 +39,7 @@ export function LogsPage(): React.JSX.Element {
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry, i) => (
+              {pageEntries.map((entry, i) => (
                 <tr
                   key={`${entry.timestamp}-${i}`}
                   className={i % 2 === 1 ? 'bg-yellow-100' : 'border-b border-border-subtle'}
@@ -51,14 +59,41 @@ export function LogsPage(): React.JSX.Element {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={clearLogs}
-        disabled={entries.length === 0}
-        className="mt-3 rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy/90 disabled:pointer-events-none disabled:opacity-50"
-      >
-        Clear Log
-      </button>
+      {entries.length > 0 && (
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={clearLogs}
+            className="rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy/90"
+          >
+            Clear Log
+          </button>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="text-text-muted-ref">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="rounded-md border border-border-subtle px-2 py-1 font-semibold text-text-muted-ref disabled:pointer-events-none disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
