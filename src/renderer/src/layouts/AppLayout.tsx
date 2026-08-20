@@ -55,35 +55,35 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Sidebar (1) is a full-height rail (absolute, out of flow so it
-          can't be squished). Content pane (3) fills the rest, and Logs
-          (2) now lives inside it, right after the page content in
-          normal flow - no more pinning to the viewport's bottom edge,
-          so there's zero gap between content and Logs regardless of how
-          tall the page content actually is. Skipped entirely on the
-          Logs page itself (current === 'logs') since that page already
-          is the full logs view - no point showing it twice. */}
-      <div className="relative flex flex-1 overflow-hidden">
+      {/* Sidebar (1) is now `fixed` (see Sidebar.tsx) - pinned to the
+          viewport itself, completely decoupled from this content
+          column's height. That's what lets Logs (2) span the TRUE full
+          window width, left edge included, instead of being boxed in by
+          the pl-44 reserved for the sidebar: Logs has no left padding of
+          its own, so it runs edge-to-edge and sits on top of the
+          sidebar's column via z-10 vs its own stacking, while still
+          following the page content in normal flow (zero gap, no
+          pinning to the bottom of the viewport). Skipped on the Logs
+          page itself since that page already is the full logs view. */}
+      <div className="flex flex-1 flex-col overflow-y-auto">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-y-auto pl-44">
-          {children}
-          {current !== 'logs' && (
-            <div className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => setLogsOpen((open) => !open)}
-                className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
-              >
-                Logs
-              </button>
-              {logsOpen && (
-                <div className="max-h-40 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
-                  <LogsPanel />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <div className="pl-44">{children}</div>
+        {current !== 'logs' && (
+          <div className="relative z-20 flex flex-col">
+            <button
+              type="button"
+              onClick={() => setLogsOpen((open) => !open)}
+              className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
+            >
+              Logs
+            </button>
+            {logsOpen && (
+              <div className="max-h-40 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
+                <LogsPanel />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
