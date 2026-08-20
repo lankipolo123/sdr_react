@@ -3,15 +3,20 @@ import { join } from 'path'
 import { PortScheduler } from './portScheduler'
 import { ChannelController, type ChannelState } from './channelController'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
-import type { Level } from './protocol/constants'
+import { MAX_CHANNELS, type Level } from './protocol/constants'
 
-// Scaffold phase: one real channel (address 1) wired end-to-end through
-// the DLL bridge, per the "scaffold + one working channel first" plan -
-// expanding to MAX_CHANNELS is just widening this map once the DLL
-// bridge itself is confirmed working on real hardware.
+// All 16 channels live from launch - matches the reference app's own
+// "blind send" architecture (main_page.py: `for address in
+// range(MAX_CHANNELS): self._build_card(address)`, no discovery step).
+// Address 1-16 is used directly as both the map key and the wire ADDR
+// byte (the reference app keeps a separate 0-based internal address
+// with a +1 display_number - not needed here since nothing else in
+// this codebase depends on 0-based indexing).
 const scheduler = new PortScheduler()
 const channels = new Map<number, ChannelController>()
-channels.set(1, new ChannelController(1, scheduler))
+for (let address = 1; address <= MAX_CHANNELS; address++) {
+  channels.set(address, new ChannelController(address, scheduler))
+}
 
 function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void {
   win.webContents.send('channel:changed', state)
@@ -19,8 +24,12 @@ function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void 
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 420,
-    height: 560,
+    // Matches the reference app's own default/minimum window size
+    // (pages/main_page.py: resize(1040, 780), setMinimumSize(1000, 700)).
+    width: 1040,
+    height: 780,
+    minWidth: 1000,
+    minHeight: 700,
     frame: false,
     webPreferences: {
       // electron-vite builds preload as ESM (out/preload/index.mjs, not

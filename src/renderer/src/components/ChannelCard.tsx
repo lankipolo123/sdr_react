@@ -33,7 +33,7 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
 
   if (state === null) {
     return (
-      <div className="w-[220px] rounded-[10px] border border-border-subtle bg-white p-3 text-xs text-text-muted-ref">
+      <div className="w-full min-w-[200px] rounded-[10px] border border-border-subtle bg-white p-3 text-xs text-text-muted-ref">
         Loading CH{String(address).padStart(2, '0')}…
       </div>
     )
@@ -47,7 +47,7 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
   return (
     <div
       className={cn(
-        'flex w-[220px] flex-col gap-1 rounded-[10px] border bg-white p-2',
+        'flex w-full min-w-[200px] flex-col gap-1 rounded-[10px] border bg-white p-2',
         isOn ? 'border-accent-blue' : 'border-border-subtle'
       )}
     >
