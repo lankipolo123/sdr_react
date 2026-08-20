@@ -1,0 +1,26 @@
+appId: com.sdr.react
+productName: SDR React
+directories:
+  buildResources: build
+files:
+  - out/**/*
+  - node_modules/koffi/**/*
+# Transit_x64.dll ships alongside the app, not bundled into the ASAR -
+# koffi.load() needs a real filesystem path, not an ASAR-packed one.
+# resolveDllPath() in src/main/dll/transit.ts reads it from
+# process.resourcesPath/dll/ in a packaged build - this extraResources
+# entry is what actually puts it there.
+extraResources:
+  - from: dll
+    to: dll
+win:
+  target:
+    - target: nsis
+      # Explicit x64 - this app is built around the 64-bit Transit.dll
+      # specifically (see src/main/dll/transit.ts), not the 32-bit one
+      # the original rewrite guide defaulted to.
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
