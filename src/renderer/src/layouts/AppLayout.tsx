@@ -53,9 +53,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Sidebar is absolutely positioned (see Sidebar.tsx) - fully out of
+          this flex row's layout flow so it can never stretch, squish
+          siblings, or leave a partial-looking border depending on
+          content height. pl-32 on the content pane just reserves enough
+          left space so the floating sidebar doesn't sit on top of it. */}
+      <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-32">{children}</div>
       </div>
 
       {/* Logs only now - status/Connect moved to the title bar above.
