@@ -64,10 +64,15 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           pinning to the bottom of the viewport). Skipped on the Logs
           page itself since that page already is the full logs view -
           same reasoning for the dashboard page, which has no relevant
-          logs of its own yet. */}
-      <div className="flex flex-1 flex-col overflow-y-auto">
+          logs of its own yet.
+
+          This outer row no longer scrolls as a whole (overflow-hidden)
+          - the content pane below has its own overflow-y-auto instead,
+          so scrolling through channel cards can't drag the Logs box
+          (or vice versa) along with it. Each scrolls independently. */}
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="pl-44">{children}</div>
+        <div className="flex-1 overflow-y-auto pl-44">{children}</div>
         {current !== 'logs' && current !== 'dashboard' && (
           <div className="relative z-[1000] flex flex-col">
             <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
