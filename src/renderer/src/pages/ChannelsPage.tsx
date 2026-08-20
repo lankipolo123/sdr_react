@@ -11,7 +11,7 @@ export function ChannelsPage(): React.JSX.Element {
   const addresses = Array.from({ length: MAX_CHANNELS }, (_, i) => i + 1)
 
   return (
-    <div className="flex-1 overflow-auto p-4">
+    <div className="p-4">
       <div
         className="grid gap-2"
         style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_MIN_WIDTH}px, 1fr))` }}

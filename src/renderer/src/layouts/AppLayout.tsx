@@ -24,7 +24,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           the button sits in a no-drag island so it stays clickable inside
           the draggable bar. */}
       <div
-        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white outline outline-2 -outline-offset-2 outline-red-500"
+        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="font-semibold">TX Controller (React)</span>
@@ -55,31 +55,35 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Three self-contained panels: Sidebar (1) and the content pane
-          (3) side by side, Logs (2) as a full-width bar underneath both,
-          absolutely positioned with a high z-index so it always sits on
-          top regardless of what's under it - no ambiguity about
-          stacking order against the sidebar or the grid. */}
-      <div className="relative flex flex-1 overflow-hidden outline outline-2 -outline-offset-2 outline-blue-500">
+      {/* Sidebar (1) is a full-height rail (absolute, out of flow so it
+          can't be squished). Content pane (3) fills the rest, and Logs
+          (2) now lives inside it, right after the page content in
+          normal flow - no more pinning to the viewport's bottom edge,
+          so there's zero gap between content and Logs regardless of how
+          tall the page content actually is. Skipped entirely on the
+          Logs page itself (current === 'logs') since that page already
+          is the full logs view - no point showing it twice. */}
+      <div className="relative flex flex-1 overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-44 outline outline-2 -outline-offset-2 outline-purple-500">
+        <div className="flex flex-1 flex-col overflow-y-auto pl-44">
           {children}
+          {current !== 'logs' && (
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => setLogsOpen((open) => !open)}
+                className="ml-4 w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
+              >
+                Logs
+              </button>
+              {logsOpen && (
+                <div className="mx-4 mb-4 max-h-40 overflow-y-auto rounded-b-md rounded-tr-md border border-border-subtle">
+                  <LogsPanel />
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col outline outline-2 -outline-offset-2 outline-orange-500">
-        <button
-          type="button"
-          onClick={() => setLogsOpen((open) => !open)}
-          className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref hover:bg-border-subtle/50"
-        >
-          Logs
-        </button>
-        {logsOpen && (
-          <div className="max-h-40 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
-            <LogsPanel />
-          </div>
-        )}
       </div>
     </div>
   )

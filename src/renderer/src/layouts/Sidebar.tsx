@@ -8,7 +8,7 @@ interface SidebarProps {
 
 export function Sidebar({ current, onNavigate }: SidebarProps): React.JSX.Element {
   return (
-    <nav className="absolute inset-y-0 left-0 z-10 flex w-40 flex-col gap-1 border-r border-border-subtle bg-slate-50 p-2 outline outline-2 -outline-offset-2 outline-green-500">
+    <nav className="absolute inset-y-0 left-0 z-10 flex w-40 flex-col gap-1 border-r border-border-subtle bg-slate-50 p-2">
       {PAGES.map((page) => (
         <button
           key={page.id}

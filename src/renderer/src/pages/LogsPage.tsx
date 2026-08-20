@@ -6,7 +6,7 @@ import { LogsPanel } from '../components/LogsPanel'
 // on ChannelsPage; this is the full, unrestricted view of it.
 export function LogsPage(): React.JSX.Element {
   return (
-    <div className="flex-1 overflow-auto p-4">
+    <div className="p-4">
       <LogsPanel />
     </div>
   )
