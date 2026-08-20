@@ -4,7 +4,7 @@
 // right now; more entries just need a case added in AppLayout's page
 // switch once they have real content.
 export const PAGES = [
-  { id: 'channels', label: 'Channels', icon: 'grid' },
+  { id: 'channels', label: 'Commands', icon: 'grid' },
   { id: 'logs', label: 'Logs', icon: 'list' },
   { id: 'dashboard', label: 'Dashboard', icon: 'layout' }
 ] as const
