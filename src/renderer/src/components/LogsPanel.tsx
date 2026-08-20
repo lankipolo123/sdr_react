@@ -21,9 +21,7 @@ export function LogsPanel(): React.JSX.Element {
             return (
               <div
                 key={`${entry.timestamp}-${i}`}
-                className={`flex gap-2 border-b border-border-subtle px-2 py-1 ${
-                  isEvenRow ? 'bg-yellow-100 text-black' : ''
-                }`}
+                className={`flex gap-2 px-2 py-1 ${isEvenRow ? 'bg-yellow-100 text-black' : ''}`}
               >
                 <span className={isEvenRow ? 'shrink-0' : 'shrink-0 text-text-muted-ref'}>
                   {new Date(entry.timestamp).toLocaleTimeString()}

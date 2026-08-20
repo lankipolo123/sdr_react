@@ -102,11 +102,16 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
       </div>
 
       {/* Logs only now - status/Connect moved to the title bar above.
-          Height trimmed to the actual row height instead of a fixed h-40
-          that left a lot of dead white space when there weren't many
-          entries yet. */}
-      <div className="flex h-28 flex-col border-t border-border-subtle bg-white">
-        <LogsPanel />
+          "Logs" tab pokes up like a folder tab (rounded top corners, no
+          bottom border so it blends into the panel below) instead of a
+          plain top border across the whole section. */}
+      <div className="flex flex-col bg-white">
+        <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
+          Logs
+        </div>
+        <div className="flex h-28 flex-col border-t border-border-subtle">
+          <LogsPanel />
+        </div>
       </div>
     </div>
   )
