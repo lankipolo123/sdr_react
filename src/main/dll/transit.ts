@@ -1,6 +1,7 @@
 import koffi from 'koffi'
 import { app } from 'electron'
-import { join, dirname } from 'path'
+import { existsSync } from 'fs'
+import { join } from 'path'
 
 // NOT YET VERIFIED ON REAL HARDWARE. This is a direct translation of the
 // already-confirmed Python ctypes bindings (see the handoff package's
@@ -21,13 +22,19 @@ import { join, dirname } from 'path'
 const DLL_FILENAME = 'Transit_x64.dll'
 
 function resolveDllPath(): string {
-  // In dev, the DLL lives at <repo>/dll/. In a packaged build, it's
-  // copied alongside the app via electron-builder's extraResources
-  // (see electron-builder.yml) - resourcesPath is the right base there.
+  // In dev, the DLL lives at <repo>/dll/, and app.getAppPath() already
+  // IS the repo root (the directory containing package.json) when
+  // running unpackaged - no extra dirname() needed (a real bug here
+  // previously: wrapping it in dirname() pointed one directory too
+  // high, so the DLL was never actually found - "specified module
+  // could not be found" was really "wrong path", not a missing
+  // dependency). In a packaged build, it's copied alongside the app via
+  // electron-builder's extraResources (see electron-builder.yml) -
+  // resourcesPath is the right base there instead.
   if (app.isPackaged) {
     return join(process.resourcesPath, 'dll', DLL_FILENAME)
   }
-  return join(dirname(app.getAppPath()), 'dll', DLL_FILENAME)
+  return join(app.getAppPath(), 'dll', DLL_FILENAME)
 }
 
 let lib: koffi.IKoffiLib | null = null
@@ -48,6 +55,14 @@ function getFns(): TransitFns | null {
   if (loadError !== null) return null
   try {
     const path = resolveDllPath()
+    if (!existsSync(path)) {
+      // Distinguishes "wrong path" from "file's there but won't load"
+      // (a real dependency-DLL problem, e.g. a missing MSVC runtime) -
+      // koffi/Windows report both as the same generic "specified module
+      // could not be found" message otherwise, which cost real
+      // debugging time once already (see resolveDllPath()'s history).
+      throw new Error(`DLL not found at resolved path: ${path}`)
+    }
     lib = koffi.load(path)
     fns = {
       AutoConnectSDR: lib.func('long AutoConnectSDR(char* buffer, long length)') as TransitFns['AutoConnectSDR'],
