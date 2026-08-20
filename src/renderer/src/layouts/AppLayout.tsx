@@ -24,7 +24,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           the button sits in a no-drag island so it stays clickable inside
           the draggable bar. */}
       <div
-        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white"
+        className="flex h-9 items-center justify-between gap-2 bg-navy px-3 text-xs text-white outline outline-2 -outline-offset-2 outline-red-500"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="font-semibold">TX Controller (React)</span>
@@ -60,12 +60,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           absolutely positioned with a high z-index so it always sits on
           top regardless of what's under it - no ambiguity about
           stacking order against the sidebar or the grid. */}
-      <div className="relative flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden outline outline-2 -outline-offset-2 outline-blue-500">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex flex-1 flex-col overflow-hidden pl-44">{children}</div>
+        <div className="flex flex-1 flex-col overflow-hidden pl-44 outline outline-2 -outline-offset-2 outline-purple-500">
+          {children}
+        </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col">
+      <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col outline outline-2 -outline-offset-2 outline-orange-500">
         <button
           type="button"
           onClick={() => setLogsOpen((open) => !open)}
