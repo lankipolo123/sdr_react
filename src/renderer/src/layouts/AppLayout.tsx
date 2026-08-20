@@ -62,12 +62,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           sidebar's column via z-10 vs its own stacking, while still
           following the page content in normal flow (zero gap, no
           pinning to the bottom of the viewport). Skipped on the Logs
-          page itself since that page already is the full logs view. */}
+          page itself since that page already is the full logs view -
+          same reasoning for the dashboard page, which has no relevant
+          logs of its own yet. */}
       <div className="flex flex-1 flex-col overflow-y-auto">
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="pl-44">{children}</div>
-        {current !== 'logs' && (
-          <div className="relative z-20 flex flex-1 flex-col">
+        {current !== 'logs' && current !== 'dashboard' && (
+          <div className="relative z-[1000] flex flex-1 flex-col">
             <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
               Logs
             </div>
