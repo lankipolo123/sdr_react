@@ -71,7 +71,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
           Logs
         </div>
-        <div className="flex h-28 flex-col border-t border-border-subtle">
+        <div className="max-h-28 overflow-y-auto border-t border-border-subtle">
           <LogsPanel />
         </div>
       </div>
