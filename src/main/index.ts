@@ -48,12 +48,16 @@ function broadcastLogEntry(win: BrowserWindow, entry: LogEntry): void {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    // Matches the reference app's own default/minimum window size
-    // (pages/main_page.py: resize(1040, 780), setMinimumSize(1000, 700)).
+    // Shrunk from the reference app's own 1040x780 default (min
+    // 1000x700) - that height left a lot of empty space below the
+    // grid once Logs became a single line instead of the old
+    // multi-row scrollable box. Tightened to match actual content
+    // height more closely; still resizable/maximizable, this is just
+    // the starting size.
     width: 1040,
-    height: 780,
+    height: 700,
     minWidth: 1000,
-    minHeight: 700,
+    minHeight: 620,
     frame: false,
     webPreferences: {
       // electron-vite builds preload as ESM (out/preload/index.mjs, not
