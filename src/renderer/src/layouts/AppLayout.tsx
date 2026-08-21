@@ -53,18 +53,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         </div>
       </div>
 
-      {/* Sidebar (1) is now `fixed` (see Sidebar.tsx) - pinned to the
-          viewport itself, completely decoupled from this content
-          column's height. That's what lets Logs (2) span the TRUE full
-          window width, left edge included, instead of being boxed in by
-          the pl-44 reserved for the sidebar: Logs has no left padding of
-          its own, so it runs edge-to-edge and sits on top of the
-          sidebar's column via z-10 vs its own stacking, while still
-          following the page content in normal flow (zero gap, no
-          pinning to the bottom of the viewport). Skipped on the Logs
-          page itself since that page already is the full logs view -
-          same reasoning for the dashboard page, which has no relevant
-          logs of its own yet.
+      {/* Sidebar (1) is `fixed` (see Sidebar.tsx) - pinned to the
+          viewport, decoupled from this content column's height.
+          Logs (2) now gets the same pl-44 as the content pane, so it
+          starts exactly where the content starts and never extends
+          under the sidebar's column - plain block below the main page,
+          nothing to overlap, no z-index trick needed. Skipped on the
+          Logs page itself since that page already is the full logs
+          view - same reasoning for the dashboard page.
 
           This outer row no longer scrolls as a whole (overflow-hidden)
           - the content pane below has its own overflow-y-auto instead,
@@ -74,7 +70,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="flex-1 overflow-y-auto pl-44">{children}</div>
         {current !== 'logs' && current !== 'dashboard' && (
-          <div className="relative z-[1000] flex flex-col">
+          <div className="flex flex-col pl-44">
             <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
               Logs
             </div>
