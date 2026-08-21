@@ -52,14 +52,14 @@ if (connectResult <= 0) {
   process.exit(1)
 }
 
-console.log('\n--- Step 2: Send ONLY the HEAD bytes (0x7E, 0x7E) - deliberately incomplete ---')
+console.log("\n--- Step 2: Send ONLY the frame's fixed start marker (2 bytes) - deliberately incomplete ---")
 console.log('(A real frame also needs TYPE, ADDR, LEN, PAYLOAD, and STOP - none of that follows here.)')
 
 const headBytes = [0x7e, 0x7e]
 for (const byte of headBytes) {
   const sendText = tokenFor(byte)
   const result = SendCommandToSDR(Buffer.from(sendText + '\0', 'ascii'), sendText.length)
-  console.log(`  sent byte 0x${byte.toString(16)} -> SendCommandToSDR returned: ${result}`)
+  console.log(`  sent token "${sendText}" -> SendCommandToSDR returned: ${result}`)
 }
 
 console.log('\n--- Step 2b: Send the literal tokens "XME", "XME", "X#E" directly - still incomplete ---')
@@ -70,7 +70,35 @@ for (const literalToken of ['XME', 'XME', 'X#E']) {
   console.log(`  sent "${literalToken}" -> SendCommandToSDR returned: ${result}`)
 }
 
-console.log('\n--- Step 3: Wait 2 seconds, watch the hardware for any reaction ---')
+console.log('\n--- Step 2c: Wait 2 seconds, watch the hardware after the incomplete tests ---')
+await new Promise((resolve) => setTimeout(resolve, 2000))
+
+console.log('\n--- Step 3: Send a COMPLETE, valid frame - Channel 1, Output ON ---')
+console.log('(Same HEAD(2) TYPE(1) ADDR(1) LEN(1) PAYLOAD(1) STOP(2) shape buildOutputSwitch() uses -')
+console.log(' this is exactly what clicking ON in the real app sends. Raw bytes stay in memory only,')
+console.log(' same as the app itself - only the translated tokens print below, never the bytes.)')
+
+// Mirrors buildOutputSwitch(addr=1, on=true) from src/main/protocol/frame.ts exactly -
+// HEAD(2) + TYPE_OUTPUT_SWITCH(1) + ADDR(1) + LEN(1) + PAYLOAD(1) + STOP(2).
+const HEAD = [0x7e, 0x7e]
+const STOP = [0x0a, 0x0d]
+const TYPE_OUTPUT_SWITCH = 1
+const OUTPUT_ON = 1
+const addr = 1
+const payload = [OUTPUT_ON]
+const frameBytes = [...HEAD, TYPE_OUTPUT_SWITCH, addr, payload.length, ...payload, ...STOP]
+
+let lastResult = null
+const sentTokens = []
+for (const byte of frameBytes) {
+  const sendText = tokenFor(byte)
+  sentTokens.push(sendText)
+  lastResult = SendCommandToSDR(Buffer.from(sendText + '\0', 'ascii'), sendText.length)
+}
+console.log(`  sent ${frameBytes.length} bytes as tokens: ${sentTokens.join(' ')}`)
+console.log(`  final SendCommandToSDR result: ${lastResult}`)
+
+console.log('\n--- Step 3b: Wait 2 seconds, watch the hardware - Channel 1 should visibly turn ON ---')
 await new Promise((resolve) => setTimeout(resolve, 2000))
 
 console.log('\n--- Step 4: Disconnect ---')
@@ -78,4 +106,7 @@ const disconnectBuf = Buffer.alloc(256)
 const disconnectResult = DisconnectSDR(disconnectBuf, disconnectBuf.length)
 console.log(`DisconnectSDR -> result=${disconnectResult} text="${readCString(disconnectBuf)}"`)
 
-console.log('\nDone. Report back: did the hardware do anything visible after Step 2, and what were the raw result codes?')
+console.log(
+  '\nDone. Report back: (1) did anything visible happen after the incomplete tests in Step 2/2b,' +
+    ' (2) did Channel 1 actually turn ON after Step 3, and (3) the raw result codes for each.'
+)
