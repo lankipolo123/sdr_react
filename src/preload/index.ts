@@ -18,7 +18,13 @@ ipcRenderer.setMaxListeners(MAX_CHANNELS + 10)
 // Qt signals.
 const api = {
   app: {
-    quit: (): Promise<void> => ipcRenderer.invoke('app:quit')
+    quit: (): Promise<void> => ipcRenderer.invoke('app:quit'),
+    // One-shot: reports the real, unclipped content height (measured
+    // from the root layout element's scrollHeight) once shortly after
+    // the Commands page's first paint, so the window can size itself
+    // to fit exactly instead of shipping a guessed constant that goes
+    // stale every time the layout changes height.
+    reportContentHeight: (height: number): void => ipcRenderer.send('app:contentHeight', height)
   },
   dll: {
     autoConnect: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:autoConnect'),

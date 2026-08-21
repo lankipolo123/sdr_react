@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from '../components/Sidebar'
 import { cn } from '../lib/utils'
@@ -15,6 +16,37 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
   const { status, statusText, connect, disconnect } = useConnection()
   const logs = useLogs()
   const latestLog = logs[0] ?? null
+  const titleBarRef = useRef<HTMLDivElement>(null)
+  const contentPaneRef = useRef<HTMLDivElement>(null)
+  const logsLineRef = useRef<HTMLDivElement>(null)
+
+  // Runs once, on the very first mount (AppLayout doesn't remount when
+  // navigating between pages, so this only ever measures the Commands
+  // page's initial layout). Each ChannelCard starts as a shorter
+  // "Loading CH01..." placeholder until its async getState() IPC call
+  // resolves - measuring on the first paint would size the window to
+  // that placeholder layout, not the real one. 250ms comfortably
+  // covers 16 parallel local IPC round-trips.
+  //
+  // Measuring these three pieces directly (title bar, content pane,
+  // Logs line) rather than their flex-1 grandparent: that grandparent
+  // is stretched to fill the window via flex-grow, so when content is
+  // SHORTER than the window, its own clientHeight/scrollHeight just
+  // report back the already-too-tall allocated size, not the smaller
+  // natural content height - there's no overflow for scrollHeight to
+  // reveal in that case. None of these three has flex-grow, so each
+  // one's offsetHeight is its true natural height regardless of how
+  // much extra space its container was given.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const height =
+        (titleBarRef.current?.offsetHeight ?? 0) +
+        (contentPaneRef.current?.offsetHeight ?? 0) +
+        (logsLineRef.current?.offsetHeight ?? 0)
+      if (height > 0) window.sdr.app.reportContentHeight(height)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -24,6 +56,7 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           the button sits in a no-drag island so it stays clickable inside
           the draggable bar. */}
       <div
+        ref={titleBarRef}
         className="flex h-9 items-center justify-between gap-2 border-b border-border-subtle bg-navy px-3 text-xs text-white"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
@@ -75,9 +108,14 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           own separate scroll region. */}
       <div className="flex flex-1 flex-col overflow-y-auto">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="pl-44">{children}</div>
+        <div ref={contentPaneRef} className="pl-44">
+          {children}
+        </div>
         {current !== 'logs' && current !== 'dashboard' && (
-          <div className="border-t border-border-subtle py-2 pl-44 pr-4 font-mono text-[10px] text-text-muted-ref">
+          <div
+            ref={logsLineRef}
+            className="border-t border-border-subtle py-2 pl-44 pr-4 font-mono text-[10px] text-text-muted-ref"
+          >
             {latestLog === null ? (
               'No commands sent yet.'
             ) : (

@@ -48,16 +48,15 @@ function broadcastLogEntry(win: BrowserWindow, entry: LogEntry): void {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    // Shrunk from the reference app's own 1040x780 default (min
-    // 1000x700) - that height left a lot of empty space below the
-    // grid once Logs became a single line instead of the old
-    // multi-row scrollable box. Tightened to match actual content
-    // height more closely; still resizable/maximizable, this is just
-    // the starting size.
+    // This is just the initial guess shown before the renderer reports
+    // its real content height (see the 'app:contentHeight' handler
+    // below) and the window snaps to fit exactly - no more guessing
+    // magic numbers that go stale every time the layout's height
+    // changes. Kept reasonably close to avoid a jarring resize flash.
     width: 1040,
     height: 700,
     minWidth: 1000,
-    minHeight: 620,
+    minHeight: 500,
     frame: false,
     webPreferences: {
       // electron-vite builds preload as ESM (out/preload/index.mjs, not
@@ -76,6 +75,22 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  // Fires once, right after the Commands page's first real paint (see
+  // AppLayout.tsx) - snaps the window to the actual content height
+  // instead of shipping a guessed constant. Only applies to THIS
+  // window and only the first report, so it can't fight a manual
+  // resize the user makes afterward.
+  let sizedToContent = false
+  const handleContentHeight = (event: Electron.IpcMainEvent, height: number): void => {
+    if (sizedToContent || event.sender !== win.webContents) return
+    sizedToContent = true
+    const [width] = win.getContentSize()
+    const [, minHeight] = win.getMinimumSize()
+    win.setContentSize(width, Math.max(minHeight, Math.ceil(height)))
+  }
+  ipcMain.on('app:contentHeight', handleContentHeight)
+  win.on('closed', () => ipcMain.removeListener('app:contentHeight', handleContentHeight))
 
   for (const controller of channels.values()) {
     controller.on('changed', (state: ChannelState) => broadcastChannelChanged(win, state))
