@@ -62,6 +62,14 @@ for (const byte of headBytes) {
   console.log(`  sent byte 0x${byte.toString(16)} -> SendCommandToSDR returned: ${result}`)
 }
 
+console.log('\n--- Step 2b: Send the literal tokens "XME", "XME", "X#E" directly - still incomplete ---')
+console.log('(Sent as-is, not derived from a byte - still only 3 pieces, missing everything after HEAD+1.)')
+
+for (const literalToken of ['XME', 'XME', 'X#E']) {
+  const result = SendCommandToSDR(Buffer.from(literalToken + '\0', 'ascii'), literalToken.length)
+  console.log(`  sent "${literalToken}" -> SendCommandToSDR returned: ${result}`)
+}
+
 console.log('\n--- Step 3: Wait 2 seconds, watch the hardware for any reaction ---')
 await new Promise((resolve) => setTimeout(resolve, 2000))
 
