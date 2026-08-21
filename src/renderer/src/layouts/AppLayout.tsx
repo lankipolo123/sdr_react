@@ -1,8 +1,8 @@
 import { Button } from '../components/ui/button'
 import { Sidebar } from '../components/Sidebar'
-import { LogsPanel } from '../components/LogsPanel'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
+import { useLogs } from '../contexts/LogsContext'
 import type { PageId } from './pages'
 
 interface AppLayoutProps {
@@ -13,6 +13,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
+  const logs = useLogs()
+  const latestLog = logs[0] ?? null
 
   return (
     <div className="relative flex h-screen w-screen flex-col bg-white text-text-dark">
@@ -54,32 +56,33 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
       </div>
 
       {/* Sidebar (1) is `fixed` (see Sidebar.tsx) - pinned to the
-          viewport, decoupled from this content column's height.
-          Logs (2) now gets the same pl-44 as the content pane, so it
-          starts exactly where the content starts and never extends
-          under the sidebar's column - plain block below the main page,
-          nothing to overlap, no z-index trick needed. Skipped on the
-          Logs page itself since that page already is the full logs
-          view - same reasoning for the dashboard page.
+          viewport, decoupled from this content column's height. Logs
+          is now a single plain line (no folder tab, no bordered box,
+          no scroll) showing just the latest entry, same pl-44 as the
+          content pane so it's flush with it. Small and short enough
+          now that it can never reach the sidebar's Logout button, so
+          Sidebar no longer needs to reserve space for it either.
+          Skipped on the Logs/Dashboard pages, same as before.
 
           This outer row no longer scrolls as a whole (overflow-hidden)
           - the content pane below has its own overflow-y-auto instead,
-          so scrolling through channel cards can't drag the Logs box
-          (or vice versa) along with it. Each scrolls independently. */}
+          so scrolling through channel cards can't drag the Logs line
+          along with it. */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Sidebar current={current} onNavigate={onNavigate} />
         <div className="flex-1 overflow-y-auto pl-44">{children}</div>
         {current !== 'logs' && current !== 'dashboard' && (
-          <div className="flex flex-col pl-44">
-            <div className="w-fit rounded-t-md border border-b-0 border-border-subtle bg-white px-3 py-1 text-[10px] font-semibold text-text-muted-ref">
-              Logs
-            </div>
-            {/* min-h keeps at least ~3 rows visible even with few
-                entries; once entries grow past max-h, this scrolls on
-                its own instead of pushing the whole page. */}
-            <div className="min-h-[76px] max-h-56 overflow-y-auto rounded-b-md border border-border-subtle bg-white">
-              <LogsPanel />
-            </div>
+          <div className="border-t border-border-subtle py-2 pl-44 pr-4 font-mono text-[10px] text-text-muted-ref">
+            {latestLog === null ? (
+              'No commands sent yet.'
+            ) : (
+              <>
+                <span>{new Date(latestLog.timestamp).toLocaleTimeString()}</span>{' '}
+                <span className="font-semibold text-accent-blue">CH{String(latestLog.address).padStart(2, '0')}</span>{' '}
+                <span className="text-text-dark">{latestLog.label}</span>{' '}
+                <span>{latestLog.sentTokens.join(' ')}</span>
+              </>
+            )}
           </div>
         )}
       </div>
