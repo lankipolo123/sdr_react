@@ -64,13 +64,18 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           Sidebar no longer needs to reserve space for it either.
           Skipped on the Logs/Dashboard pages, same as before.
 
-          This outer row no longer scrolls as a whole (overflow-hidden)
-          - the content pane below has its own overflow-y-auto instead,
-          so scrolling through channel cards can't drag the Logs line
-          along with it. */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+          Content pane is no longer flex-1 - that forced it to always
+          fill the full remaining window height regardless of how much
+          the grid actually needed, leaving a gap before Logs whenever
+          the grid was shorter than the window. Now it just sizes to
+          its own content, and the outer row's own overflow-y-auto
+          handles scrolling for the whole page if content+Logs together
+          exceed the window - acceptable now that Logs is one short
+          line, not the old scrollable multi-row box that needed its
+          own separate scroll region. */}
+      <div className="flex flex-1 flex-col overflow-y-auto">
         <Sidebar current={current} onNavigate={onNavigate} />
-        <div className="flex-1 overflow-y-auto pl-44">{children}</div>
+        <div className="pl-44">{children}</div>
         {current !== 'logs' && current !== 'dashboard' && (
           <div className="border-t border-border-subtle py-2 pl-44 pr-4 font-mono text-[10px] text-text-muted-ref">
             {latestLog === null ? (
