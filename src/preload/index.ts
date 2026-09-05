@@ -3,6 +3,7 @@ import type { ChannelState, LogEntry } from '../main/channelController'
 import type { LogPage } from '../main/logStore'
 import { MAX_CHANNELS, type Level } from '../main/protocol/constants'
 import type { DllCallResult } from '../main/dll/transit'
+import type { SensorState } from '../main/serial/sensor'
 
 // Every channel card mounts its own onChanged listener on the shared
 // 'channel:changed' IPC event (16 of them, one per channel) - legitimate
@@ -69,6 +70,29 @@ const api = {
     // Reads a page of the permanent on-disk log (see logStore.ts) -
     // deliberately no delete/clear call exposed anywhere in this API.
     getPage: (page: number, pageSize: number): Promise<LogPage> => ipcRenderer.invoke('logs:getPage', page, pageSize)
+  },
+  sensor: {
+    listPorts: (): Promise<string[]> => ipcRenderer.invoke('sensor:listPorts'),
+    getState: (): Promise<SensorState> => ipcRenderer.invoke('sensor:getState'),
+    connect: (path: string): Promise<boolean> => ipcRenderer.invoke('sensor:connect', path),
+    disconnect: (): Promise<void> => ipcRenderer.invoke('sensor:disconnect'),
+    // Last port successfully connected to, remembered across restarts -
+    // never auto-connected, just pre-selected in the port list.
+    savedPort: (): Promise<string | null> => ipcRenderer.invoke('sensor:savedPort'),
+    onChanged: (callback: (state: SensorState) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: SensorState): void => callback(state)
+      ipcRenderer.on('sensor:changed', listener)
+      return () => ipcRenderer.removeListener('sensor:changed', listener)
+    }
+  },
+  killSwitch: {
+    getState: (): Promise<boolean> => ipcRenderer.invoke('killSwitch:getState'),
+    reset: (): Promise<void> => ipcRenderer.invoke('killSwitch:reset'),
+    onChanged: (callback: (tripped: boolean) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, tripped: boolean): void => callback(tripped)
+      ipcRenderer.on('killSwitch:changed', listener)
+      return () => ipcRenderer.removeListener('killSwitch:changed', listener)
+    }
   }
 }
 

@@ -36,7 +36,9 @@ export default {
         'text-muted-ref': '#6B7280',
         'status-ok': '#087F23',
         'status-error': '#B00020',
-        'warning-border': '#F59E0B'
+        'warning-border': '#F59E0B',
+        'warning-bg': '#FEF3C7',
+        'warning-text': '#92400E'
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -4,6 +4,7 @@ import { Sidebar } from '../components/Sidebar'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
 import { useLogs } from '../contexts/LogsContext'
+import { useSensor } from '../contexts/SensorContext'
 import type { PageId } from './pages'
 
 interface AppLayoutProps {
@@ -14,6 +15,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
+  const { killSwitchTripped, resetKillSwitch } = useSensor()
   const logs = useLogs()
   const latestLog = logs[0] ?? null
   const titleBarRef = useRef<HTMLDivElement>(null)
@@ -87,6 +89,30 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           </Button>
         </div>
       </div>
+
+      {/* Safety-critical, so shown globally regardless of which page is
+          open, not tucked into the Dashboard - see SensorContext for the
+          60C, manual-reset-only trip logic. */}
+      {killSwitchTripped && (
+        <div className="flex items-center gap-2 border-b border-warning-border bg-warning-bg py-1.5 pl-44 pr-3 text-xs">
+          {/* Sidebar is `fixed` + `z-10` starting right below the
+              titlebar (see Sidebar.tsx), so without this left padding it
+              paints over this banner's left edge - same pl-44 the
+              content pane and Logs line already use to sit flush next
+              to it instead of underneath it. */}
+          <span className="flex-1 font-semibold text-warning-text">
+            KILL SWITCH TRIPPED - amplifier over temperature, all channels forced OFF
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 border-navy bg-navy px-2 text-[10px] text-white hover:bg-navy/90"
+            onClick={resetKillSwitch}
+          >
+            Reset
+          </Button>
+        </div>
+      )}
 
       {/* Sidebar (1) is `fixed` (see Sidebar.tsx) - pinned to the
           viewport, decoupled from this content column's height. Logs

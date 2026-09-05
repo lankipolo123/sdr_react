@@ -5,6 +5,15 @@ directories:
 files:
   - out/**/*
   - node_modules/koffi/**/*
+  # serialport (the amplifier temperature sensor's raw Modbus RTU
+  # connection - see src/main/serial/) ships prebuilt native bindings
+  # for every platform inside the one package, N-API-based so the same
+  # binary works in both plain Node and Electron with no rebuild step.
+  # `files` defaults to an explicit allowlist in this config (see the
+  # koffi entry above), so these need listing too or the packaged app
+  # would be missing the module entirely.
+  - node_modules/serialport/**/*
+  - node_modules/@serialport/**/*
 # Transit_x64.dll ships alongside the app, not bundled into the ASAR -
 # koffi.load() needs a real filesystem path, not an ASAR-packed one.
 # resolveDllPath() in src/main/dll/transit.ts reads it from

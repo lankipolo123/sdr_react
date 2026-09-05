@@ -6,6 +6,9 @@ import { loadChannelStates, saveChannelStates } from './channelStore'
 import { appendLogEntry, getLogPage } from './logStore'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
 import { MAX_CHANNELS, type Level } from './protocol/constants'
+import { SensorController, type SensorState } from './serial/sensor'
+import { SafetyController } from './safety'
+import { loadSettings, saveSettings } from './settingsStore'
 
 // Direct port of the reference app's channels.ini persistence (see
 // channelStore.ts) - remembers each channel's last mode/level/output
@@ -35,6 +38,18 @@ for (let address = 1; address <= MAX_CHANNELS; address++) {
   channels.set(address, new ChannelController(address, scheduler, savedChannelStates.get(address)))
 }
 
+const settingsPath = join(app.getPath('userData'), 'config', 'settings.json')
+const settings = loadSettings(settingsPath)
+
+// Amplifier temperature/humidity sensor - a real, separate raw serial
+// (Modbus RTU) connection, unrelated to the RS-422/Transit.dll bus
+// above. See serial/sensor.ts. The kill switch listens to it directly
+// and forces every channel off the moment it reports an overtemp
+// reading (safety.ts).
+const sensor = new SensorController()
+const safety = new SafetyController(channels)
+sensor.on('changed', (state: SensorState) => safety.onSensorState(state))
+
 function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void {
   win.webContents.send('channel:changed', state)
 }
@@ -48,6 +63,14 @@ function broadcastLogEntry(win: BrowserWindow, entry: LogEntry): void {
 
 function broadcastPortLost(win: BrowserWindow, error: string): void {
   win.webContents.send('dll:portLost', error)
+}
+
+function broadcastSensorChanged(win: BrowserWindow, state: SensorState): void {
+  win.webContents.send('sensor:changed', state)
+}
+
+function broadcastKillSwitchChanged(win: BrowserWindow, tripped: boolean): void {
+  win.webContents.send('killSwitch:changed', tripped)
 }
 
 function createWindow(): void {
@@ -105,6 +128,12 @@ function createWindow(): void {
     controller.on('port-lost', (error: string) => broadcastPortLost(win, error))
   }
 
+  // sensor's own disconnect() (called from portLost()) already fires
+  // 'changed' with connected: false - nothing extra to forward for
+  // 'portLost' itself.
+  sensor.on('changed', (state: SensorState) => broadcastSensorChanged(win, state))
+  safety.on('changed', (tripped: boolean) => broadcastKillSwitchChanged(win, tripped))
+
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
@@ -128,16 +157,37 @@ app.whenReady().then(() => {
 
   ipcMain.handle('channel:list', () => Array.from(channels.keys()))
   ipcMain.handle('channel:getState', (_event, address: number) => requireChannel(address).getState())
-  ipcMain.handle('channel:turnOn', (_event, address: number) => requireChannel(address).turnOutputOn())
+  ipcMain.handle('channel:turnOn', (_event, address: number) => {
+    if (!safety.allowPowerOn()) return
+    requireChannel(address).turnOutputOn()
+  })
+  // Never gated - OFF must always go through, kill-switch-tripped or not.
   ipcMain.handle('channel:turnOff', (_event, address: number) => requireChannel(address).turnOutputOff())
-  ipcMain.handle('channel:setLevel', (_event, address: number, level: Level) =>
+  ipcMain.handle('channel:setLevel', (_event, address: number, level: Level) => {
+    if (level !== 0 && !safety.allowPowerOn()) return
     requireChannel(address).setLevel(level)
-  )
+  })
   ipcMain.handle('channel:setMode', (_event, address: number, mode: number) =>
     requireChannel(address).setMode(mode)
   )
 
   ipcMain.handle('logs:getPage', (_event, page: number, pageSize: number) => getLogPage(page, pageSize, logsPath))
+
+  ipcMain.handle('sensor:listPorts', () => SensorController.listPorts())
+  ipcMain.handle('sensor:getState', () => sensor.getState())
+  ipcMain.handle('sensor:connect', async (_event, path: string) => {
+    const ok = await sensor.connect(path)
+    if (ok) {
+      settings.sensorPort = path
+      saveSettings(settings, settingsPath)
+    }
+    return ok
+  })
+  ipcMain.handle('sensor:disconnect', () => sensor.disconnect())
+  ipcMain.handle('sensor:savedPort', () => settings.sensorPort)
+
+  ipcMain.handle('killSwitch:getState', () => safety.tripped)
+  ipcMain.handle('killSwitch:reset', () => safety.reset())
 
   // Triggers the normal window-all-closed path below (channel state
   // save + controller disposal) rather than duplicating that logic -
@@ -157,5 +207,6 @@ app.on('window-all-closed', () => {
     channelsIniPath
   )
   for (const controller of channels.values()) controller.dispose()
+  sensor.disconnect()
   if (process.platform !== 'darwin') app.quit()
 })

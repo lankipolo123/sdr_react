@@ -1,7 +1,8 @@
-import { Plug, Radio, SignalHigh, History, type LucideIcon } from 'lucide-react'
+import { Plug, Radio, SignalHigh, History, Thermometer, type LucideIcon } from 'lucide-react'
 import { useAllChannels } from '../hooks/useAllChannels'
 import { useLogs } from '../contexts/LogsContext'
 import { useConnection } from '../contexts/ConnectionContext'
+import { useSensor } from '../contexts/SensorContext'
 import { LEVEL_LABELS, MAX_CHANNELS, type Level } from '../../../main/protocol/constants'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -9,6 +10,20 @@ const STATUS_COLORS: Record<string, string> = {
   connecting: '#F59E0B',
   failed: '#B00020',
   idle: '#6B7280'
+}
+
+const GAUGE_MAX_C = 80
+// Confirmed thresholds: 0-19 white/freezing, 20-39 green/low, 40-55
+// blue, 56-65 orange, 66+ red - same bands as the C rewrite and
+// sdr_app. Drives the numeric reading's text color; the gauge bar
+// itself uses a few smoother interpolation stops for a nicer blend
+// between the same colors (see the inline gradient below).
+function tempBandColor(tempC: number): string {
+  if (tempC < 20) return '#6B7280'
+  if (tempC < 40) return '#16A34A'
+  if (tempC < 56) return '#2563EB'
+  if (tempC < 66) return '#D97706'
+  return '#DC2626'
 }
 
 interface DashboardCardProps {
@@ -39,6 +54,15 @@ export function DashboardPage(): React.JSX.Element {
   const channels = useAllChannels()
   const { status, statusText } = useConnection()
   const logs = useLogs()
+  const {
+    state: sensorState,
+    ports,
+    selectedPort,
+    setSelectedPort,
+    refreshPorts,
+    connect: sensorConnect,
+    disconnect: sensorDisconnect
+  } = useSensor()
 
   const onCount = channels.filter((c) => c.outputOn).length
 
@@ -93,6 +117,66 @@ export function DashboardPage(): React.JSX.Element {
           </div>
         </DashboardCard>
       </div>
+
+      <DashboardCard title="Amplifier Temperature" icon={Thermometer} className="mt-3">
+        <div className="mt-2 flex items-center gap-1.5">
+          <select
+            className="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-white px-2 text-xs text-text-dark"
+            value={selectedPort}
+            onChange={(e) => setSelectedPort(e.target.value)}
+          >
+            {ports.length === 0 && <option value="">No ports found</option>}
+            {ports.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="h-7 shrink-0 rounded-md border border-border-subtle bg-white px-2.5 text-xs text-text-dark"
+            onClick={refreshPorts}
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            className="h-7 shrink-0 rounded-md bg-navy px-3 text-xs font-semibold text-white"
+            onClick={sensorState.connected ? sensorDisconnect : sensorConnect}
+          >
+            {sensorState.connected ? 'Disconnect' : 'Connect'}
+          </button>
+        </div>
+        <div className="mt-2.5 flex items-center gap-2">
+          <div
+            className="relative h-3.5 min-w-[80px] flex-1 rounded-full border border-border-subtle"
+            style={{
+              background:
+                'linear-gradient(to right, #FFFFFF 0%, #22C55E 25%, #3B82F6 60%, #F59E0B 76.25%, #DC2626 100%)'
+            }}
+          >
+            {sensorState.hasReading && (
+              <div
+                className="absolute -top-0.5 h-[18px] w-[2px] -translate-x-px bg-[#14161A]"
+                style={{ left: `${Math.max(0, Math.min(100, (sensorState.temperatureC / GAUGE_MAX_C) * 100))}%` }}
+              />
+            )}
+          </div>
+          <span
+            className="min-w-[46px] text-sm font-bold"
+            style={{ color: sensorState.hasReading ? tempBandColor(sensorState.temperatureC) : undefined }}
+          >
+            {sensorState.hasReading ? `${sensorState.temperatureC.toFixed(1)} C` : '-'}
+          </span>
+          <span className="whitespace-nowrap text-[11px] text-text-muted-ref">
+            {sensorState.hasReading
+              ? `Humidity: ${sensorState.humidityPct.toFixed(1)} %`
+              : sensorState.connected
+                ? `Reading… (try ${sensorState.attemptCount}, last ${sensorState.lastRxLen} B)`
+                : 'Humidity: -'}
+          </span>
+        </div>
+      </DashboardCard>
 
       <DashboardCard title="Recent Activity" icon={History} className="mt-3">
         {logs.length === 0 ? (
