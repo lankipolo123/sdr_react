@@ -139,6 +139,17 @@ export class ChannelController extends EventEmitter {
           sentTokens,
           timestamp: Date.now()
         } satisfies LogEntry)
+        // A DLL call throwing (as opposed to succeeding with a "rejected"
+        // response - there isn't one here, sends are fire-and-forget) means
+        // the hardware bridge itself is gone, most likely the USB adapter
+        // was unplugged. ConnectionContext's `status` only ever gets set by
+        // explicit connect()/disconnect() calls, so without this it would
+        // sit on "connected" forever while every command kept failing -
+        // requireConnected() would keep waving commands through into a dead
+        // DLL instead of re-prompting the user to reconnect.
+        if (error !== null) {
+          this.emit('port-lost', error)
+        }
       }, SEND_SETTLE_MS)
     })
   }

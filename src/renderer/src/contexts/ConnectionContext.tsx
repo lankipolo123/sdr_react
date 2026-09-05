@@ -32,6 +32,25 @@ export function ConnectionProvider({ children }: { children: ReactNode }): React
     })
   }, [])
 
+  useEffect(() => {
+    // A channel command's DLL call just threw - the bridge/hardware is
+    // gone (most likely the USB adapter was unplugged). Without this,
+    // `status` only ever changes via explicit connect()/disconnect()
+    // calls, so it would keep reading "connected" forever while every
+    // subsequent command silently failed - requireConnected() would
+    // keep waving commands through instead of re-prompting to reconnect,
+    // and a plain re-click of Connect after replugging the adapter would
+    // look like a no-op the same way it did before this fix on the
+    // desktop app's RS-422/sensor ports.
+    return window.sdr.dll.onPortLost((error) => {
+      setStatus((prev) => {
+        if (prev !== 'connected') return prev
+        setStatusText(`Port lost: ${error}`)
+        return 'failed'
+      })
+    })
+  }, [])
+
   const connect = useCallback(async (): Promise<void> => {
     setStatus('connecting')
     setStatusText('Connecting…')

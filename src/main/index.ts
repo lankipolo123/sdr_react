@@ -46,6 +46,10 @@ function broadcastLogEntry(win: BrowserWindow, entry: LogEntry): void {
   win.webContents.send('log:entry', entry)
 }
 
+function broadcastPortLost(win: BrowserWindow, error: string): void {
+  win.webContents.send('dll:portLost', error)
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     // This is just the initial guess shown before the renderer reports
@@ -98,6 +102,7 @@ function createWindow(): void {
       appendLogEntry(entry, logsPath)
       broadcastLogEntry(win, entry)
     })
+    controller.on('port-lost', (error: string) => broadcastPortLost(win, error))
   }
 
   if (process.env.ELECTRON_RENDERER_URL) {

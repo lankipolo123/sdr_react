@@ -30,7 +30,18 @@ const api = {
     autoConnect: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:autoConnect'),
     checkConnection: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:checkConnection'),
     disconnect: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:disconnect'),
-    loadError: (): Promise<string | null> => ipcRenderer.invoke('dll:loadError')
+    loadError: (): Promise<string | null> => ipcRenderer.invoke('dll:loadError'),
+    // Fires whenever any channel's DLL call throws (not a "device
+    // rejected it" response - there isn't one here, sends are
+    // fire-and-forget - a real bridge/hardware failure, most likely the
+    // USB adapter being unplugged). ConnectionContext uses this to stop
+    // trusting a stale "connected" status that only explicit connect()/
+    // disconnect() calls would otherwise ever change.
+    onPortLost: (callback: (error: string) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, error: string): void => callback(error)
+      ipcRenderer.on('dll:portLost', listener)
+      return () => ipcRenderer.removeListener('dll:portLost', listener)
+    }
   },
   channels: {
     list: (): Promise<number[]> => ipcRenderer.invoke('channel:list'),
