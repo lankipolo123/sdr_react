@@ -1,5 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, nativeImage, dialog } from 'electron'
+import { join, dirname } from 'path'
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs'
 import { PortScheduler } from './portScheduler'
 import { ChannelController, type ChannelState, type LogEntry } from './channelController'
 import { loadChannelStates, saveChannelStates } from './channelStore'
@@ -7,7 +8,7 @@ import { appendLogEntry, getLogPage } from './logStore'
 import { dllAutoConnect, dllCheckConnection, dllDisconnect, getDllLoadError } from './dll/transit'
 import { MAX_CHANNELS, type Level } from './protocol/constants'
 import { SensorController, type SensorState } from './serial/sensor'
-import { SafetyController } from './safety'
+import { SafetyController, type KillSwitchState } from './safety'
 import { loadSettings, saveSettings } from './settingsStore'
 
 // Direct port of the reference app's channels.ini persistence (see
@@ -48,7 +49,11 @@ const settings = loadSettings(settingsPath)
 // reading (safety.ts).
 const sensor = new SensorController()
 const safety = new SafetyController(channels)
-sensor.on('changed', (state: SensorState) => safety.onSensorState(state))
+// Rack-wide average across every sensor unit that currently has a real
+// reading (see SensorController.getAverageTemperature()) - same trigger
+// source as the C rewrite's check_kill_switch(), not any single unit's
+// reading alone.
+sensor.on('changed', () => safety.onSensorState(sensor.getAverageTemperature()))
 
 function broadcastChannelChanged(win: BrowserWindow, state: ChannelState): void {
   win.webContents.send('channel:changed', state)
@@ -69,12 +74,65 @@ function broadcastSensorChanged(win: BrowserWindow, state: SensorState): void {
   win.webContents.send('sensor:changed', state)
 }
 
-function broadcastKillSwitchChanged(win: BrowserWindow, tripped: boolean): void {
-  win.webContents.send('killSwitch:changed', tripped)
+function broadcastKillSwitchChanged(win: BrowserWindow, state: KillSwitchState): void {
+  win.webContents.send('killSwitch:changed', state)
+}
+
+// Same dev-vs-packaged split as resolveDllPath() in dll/transit.ts:
+// resources/icon.png ships via electron-builder's extraResources (see
+// electron-builder.yml), landing under process.resourcesPath in a
+// packaged build but staying at the repo root in dev.
+function resolveDefaultIconPath(): string {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'resources', 'icon.png')
+  }
+  return join(app.getAppPath(), 'resources', 'icon.png')
+}
+
+// User-swappable override, same convention as the C rewrite's
+// branding/icon.ico (see branding/README.md): a branding/icon.png
+// dropped next to the installed app overrides the window/taskbar icon,
+// checked once at startup. The per-user NSIS install dir
+// ($LOCALAPPDATA\Programs\SDR React) is writable without elevation, so
+// this works the same way post-install as it does in dev - no
+// Program-Files-needs-admin trap like the one settingsStore.ts already
+// avoids for app settings.
+//
+// This only covers the *running* app's icon, not the packaged .exe
+// file's own icon as shown in Explorer - that one is baked in at build
+// time from build/icon.ico (see electron-builder.yml) and would need a
+// full rebuild to change, same limitation noted in the C rewrite's
+// branding/README.md for its apply_icon tool.
+function resolveBrandingIconPath(): string {
+  const appDir = app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
+  return join(appDir, 'branding', 'icon.png')
+}
+
+function loadAppIcon(): Electron.NativeImage | undefined {
+  for (const iconPath of [resolveBrandingIconPath(), resolveDefaultIconPath()]) {
+    if (!existsSync(iconPath)) continue
+    const image = nativeImage.createFromPath(iconPath)
+    if (!image.isEmpty()) return image
+  }
+  return undefined
+}
+
+// Re-applies the current icon (default or branding override) to every
+// open window immediately, no restart needed - same "takes effect right
+// away" behavior as the C rewrite's Change Logo. setIcon() is a no-op on
+// macOS (window icons aren't a thing there); harmless to call regardless
+// since this app targets Windows.
+function applyIconToAllWindows(): void {
+  const icon = loadAppIcon()
+  if (icon === undefined) return
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.setIcon(icon)
+  }
 }
 
 function createWindow(): void {
   const win = new BrowserWindow({
+    icon: loadAppIcon(),
     // This is just the initial guess shown before the renderer reports
     // its real content height (see the 'app:contentHeight' handler
     // below) and the window snaps to fit exactly - no more guessing
@@ -132,7 +190,7 @@ function createWindow(): void {
   // 'changed' with connected: false - nothing extra to forward for
   // 'portLost' itself.
   sensor.on('changed', (state: SensorState) => broadcastSensorChanged(win, state))
-  safety.on('changed', (tripped: boolean) => broadcastKillSwitchChanged(win, tripped))
+  safety.on('changed', (state: KillSwitchState) => broadcastKillSwitchChanged(win, state))
 
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -158,13 +216,13 @@ app.whenReady().then(() => {
   ipcMain.handle('channel:list', () => Array.from(channels.keys()))
   ipcMain.handle('channel:getState', (_event, address: number) => requireChannel(address).getState())
   ipcMain.handle('channel:turnOn', (_event, address: number) => {
-    if (!safety.allowPowerOn()) return
+    if (!safety.allowPowerOn(address)) return
     requireChannel(address).turnOutputOn()
   })
   // Never gated - OFF must always go through, kill-switch-tripped or not.
   ipcMain.handle('channel:turnOff', (_event, address: number) => requireChannel(address).turnOutputOff())
   ipcMain.handle('channel:setLevel', (_event, address: number, level: Level) => {
-    if (level !== 0 && !safety.allowPowerOn()) return
+    if (level !== 0 && !safety.allowPowerOn(address)) return
     requireChannel(address).setLevel(level)
   })
   ipcMain.handle('channel:setMode', (_event, address: number, mode: number) =>
@@ -186,8 +244,42 @@ app.whenReady().then(() => {
   ipcMain.handle('sensor:disconnect', () => sensor.disconnect())
   ipcMain.handle('sensor:savedPort', () => settings.sensorPort)
 
-  ipcMain.handle('killSwitch:getState', () => safety.tripped)
-  ipcMain.handle('killSwitch:reset', () => safety.reset())
+  ipcMain.handle('killSwitch:getState', () => safety.getState())
+  ipcMain.handle('killSwitch:resetAll', () => safety.resetAll())
+  ipcMain.handle('killSwitch:resetOne', (_event, address: number) => safety.resetOne(address))
+  // Same rack-wide effect as an automatic overtemp trip, for testing
+  // without needing the average to actually cross the threshold. The
+  // confirmation dialog lives in the renderer (ForceTripDialog) - this
+  // handler trusts that it was only invoked after the user confirmed.
+  ipcMain.handle('killSwitch:manualTrip', () => safety.manualTripAll())
+
+  ipcMain.handle('branding:status', () => existsSync(resolveBrandingIconPath()))
+  ipcMain.handle('branding:chooseLogo', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Choose a logo image',
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'bmp', 'ico'] }],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) return false
+
+    const source = nativeImage.createFromPath(result.filePaths[0])
+    if (source.isEmpty()) return false
+
+    // Square down to a standard icon size - resize() only ever scales
+    // the loaded image, never touches the source file itself.
+    const resized = source.resize({ width: 256, height: 256 })
+    const brandingPath = resolveBrandingIconPath()
+    mkdirSync(dirname(brandingPath), { recursive: true })
+    writeFileSync(brandingPath, resized.toPNG())
+    applyIconToAllWindows()
+    return true
+  })
+  ipcMain.handle('branding:resetLogo', () => {
+    const brandingPath = resolveBrandingIconPath()
+    if (existsSync(brandingPath)) rmSync(brandingPath)
+    applyIconToAllWindows()
+    return true
+  })
 
   // Triggers the normal window-all-closed path below (channel state
   // save + controller disposal) rather than duplicating that logic -

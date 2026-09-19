@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { SensorState } from '../../../main/serial/sensor'
+import type { KillSwitchState } from '../../../main/safety'
 
 interface SensorContextValue {
   state: SensorState
@@ -9,20 +10,19 @@ interface SensorContextValue {
   refreshPorts: () => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
-  killSwitchTripped: boolean
-  resetKillSwitch: () => Promise<void>
+  killSwitchState: KillSwitchState
+  isChannelTripped: (address: number) => boolean
+  resetKillSwitchAll: () => Promise<void>
+  resetKillSwitchOne: (address: number) => Promise<void>
+  manualTripKillSwitch: () => Promise<void>
 }
 
 function initialState(): SensorState {
-  return {
-    connected: false,
-    online: false,
-    hasReading: false,
-    temperatureC: 0,
-    humidityPct: 0,
-    attemptCount: 0,
-    lastRxLen: 0
-  }
+  return { connected: false, units: [] }
+}
+
+function initialKillSwitchState(): KillSwitchState {
+  return { trippedAddresses: [] }
 }
 
 const SensorContext = createContext<SensorContextValue | null>(null)
@@ -31,7 +31,7 @@ export function SensorProvider({ children }: { children: ReactNode }): React.JSX
   const [state, setState] = useState<SensorState>(initialState())
   const [ports, setPorts] = useState<string[]>([])
   const [selectedPort, setSelectedPort] = useState('')
-  const [killSwitchTripped, setKillSwitchTripped] = useState(false)
+  const [killSwitchState, setKillSwitchState] = useState<KillSwitchState>(initialKillSwitchState())
 
   const refreshPorts = useCallback((): void => {
     window.sdr.sensor.listPorts().then((list) => {
@@ -46,14 +46,14 @@ export function SensorProvider({ children }: { children: ReactNode }): React.JSX
 
   useEffect(() => {
     window.sdr.sensor.getState().then(setState)
-    window.sdr.killSwitch.getState().then(setKillSwitchTripped)
+    window.sdr.killSwitch.getState().then(setKillSwitchState)
     window.sdr.sensor.savedPort().then((saved) => {
       if (saved !== null) setSelectedPort((prev) => prev || saved)
     })
     refreshPorts()
 
     const offSensor = window.sdr.sensor.onChanged(setState)
-    const offKillSwitch = window.sdr.killSwitch.onChanged(setKillSwitchTripped)
+    const offKillSwitch = window.sdr.killSwitch.onChanged(setKillSwitchState)
     return () => {
       offSensor()
       offKillSwitch()
@@ -69,8 +69,21 @@ export function SensorProvider({ children }: { children: ReactNode }): React.JSX
     await window.sdr.sensor.disconnect()
   }, [])
 
-  const resetKillSwitch = useCallback(async (): Promise<void> => {
-    await window.sdr.killSwitch.reset()
+  const isChannelTripped = useCallback(
+    (address: number): boolean => killSwitchState.trippedAddresses.includes(address),
+    [killSwitchState]
+  )
+
+  const resetKillSwitchAll = useCallback(async (): Promise<void> => {
+    await window.sdr.killSwitch.resetAll()
+  }, [])
+
+  const resetKillSwitchOne = useCallback(async (address: number): Promise<void> => {
+    await window.sdr.killSwitch.resetOne(address)
+  }, [])
+
+  const manualTripKillSwitch = useCallback(async (): Promise<void> => {
+    await window.sdr.killSwitch.manualTrip()
   }, [])
 
   return (
@@ -83,8 +96,11 @@ export function SensorProvider({ children }: { children: ReactNode }): React.JSX
         refreshPorts,
         connect,
         disconnect,
-        killSwitchTripped,
-        resetKillSwitch
+        killSwitchState,
+        isChannelTripped,
+        resetKillSwitchAll,
+        resetKillSwitchOne,
+        manualTripKillSwitch
       }}
     >
       {children}

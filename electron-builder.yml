@@ -2,6 +2,16 @@ appId: com.sdr.react
 productName: SDR React
 directories:
   buildResources: build
+# koffi and serialport both ship prebuilt N-API bindings for every
+# platform already (see the serialport comment under files: below) -
+# there's nothing to compile. electron-builder's default npmRebuild
+# tries to rebuild native deps from source for the target arch anyway,
+# which node-gyp can't do cross-platform (this build runs on Linux,
+# targeting win/x64) and would be wasted work even building natively.
+npmRebuild: false
+# build/icon.ico (multi-size, 16-256px) is picked up automatically for
+# the win/nsis target from directories.buildResources above - no
+# explicit win.icon needed.
 files:
   - out/**/*
   - node_modules/koffi/**/*
@@ -22,6 +32,13 @@ files:
 extraResources:
   - from: dll
     to: dll
+  # Default app icon (window/taskbar icon at runtime - see
+  # resolveIconPath() in src/main/index.ts). Separate from build/icon.ico
+  # above, which only covers the packaged .exe's own file icon and the
+  # installer/uninstaller icon - Windows doesn't derive a running
+  # window's icon from the exe's file icon automatically.
+  - from: resources
+    to: resources
 win:
   target:
     - target: nsis

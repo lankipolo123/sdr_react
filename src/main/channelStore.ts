@@ -14,6 +14,7 @@ export interface SavedChannelState {
   mode?: number
   lastLevel?: Level
   outputOn?: boolean
+  uptimeSeconds?: number
 }
 
 const MODE_NAME_TO_CODE = new Map<string, number>(
@@ -76,6 +77,9 @@ export function loadChannelStates(path: string): Map<number, SavedChannelState> 
       currentEntry.lastLevel = LEVEL_NAME_TO_LEVEL.get(value)
     } else if (key === 'output' && (value === 'on' || value === 'off')) {
       currentEntry.outputOn = value === 'on'
+    } else if (key === 'uptimeseconds') {
+      const seconds = Number(value)
+      if (Number.isFinite(seconds) && seconds >= 0) currentEntry.uptimeSeconds = seconds
     }
   }
   flush()
@@ -90,6 +94,7 @@ export function saveChannelStates(states: ChannelState[], path: string): void {
     lines.push(`mode = ${MODE_NAMES[state.mode] ?? MODE_NAMES[MODE_WHITE_NOISE]}`)
     lines.push(`power = ${LEVEL_LABELS[state.lastLevel]}`)
     lines.push(`output = ${state.outputOn ? 'on' : 'off'}`)
+    lines.push(`uptimeSeconds = ${Math.floor(state.uptimeSeconds)}`)
     lines.push('')
   }
 

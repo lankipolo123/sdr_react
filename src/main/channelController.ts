@@ -21,6 +21,12 @@ export interface ChannelState {
   busy: boolean
   lastCommand: string
   lastCommandUnconfirmed: boolean
+  // Cumulative ON-time, in seconds - an odometer, not an app-uptime
+  // counter (see ChannelController's uptimeBaseSeconds/onSince comment).
+  // Always freshly computed as of "now" (see getState()), so it reads
+  // correctly even without a new IPC event since the last ON/OFF edge -
+  // the renderer ticks it forward locally between updates.
+  uptimeSeconds: number
   // Deliberately NOT exposing the frame's raw/logical protocol bytes
   // anywhere in this state object - those must never be visible. The
   // DLL-translated values (what CommandTokens/SendCommandToSDR actually
@@ -52,13 +58,27 @@ function initialState(address: number, saved?: SavedChannelState): ChannelState 
     lastLevel,
     busy: false,
     lastCommand: '—',
-    lastCommandUnconfirmed: false
+    lastCommandUnconfirmed: false,
+    uptimeSeconds: saved?.uptimeSeconds ?? 0
   }
 }
 
 export class ChannelController extends EventEmitter {
   readonly address: number
   private state: ChannelState
+  // Cumulative ON-time tracking (see ChannelState.uptimeSeconds) - an
+  // odometer, not an app-uptime counter: each channel tracks its OWN
+  // time actually transmitting, not how long the app process has been
+  // open. uptimeBaseSeconds is everything accumulated BEFORE the
+  // channel's current ON period (or the whole total, while it's off);
+  // onSince is when the current ON period started (epoch ms,
+  // meaningful only while outputOn) - direct port of the C rewrite's
+  // g_channel_uptime_base_seconds/g_channel_on_since_ms, adapted to
+  // this codebase's event-driven state updates instead of a WM_TIMER
+  // poll: the edge is detected the moment outputOn actually changes
+  // (in update()) rather than by comparing against last tick's value.
+  private uptimeBaseSeconds: number
+  private onSince: number | null
 
   constructor(
     address: number,
@@ -68,13 +88,35 @@ export class ChannelController extends EventEmitter {
     super()
     this.address = address
     this.state = initialState(address, saved)
+    this.uptimeBaseSeconds = saved?.uptimeSeconds ?? 0
+    // A channel restored as already ON starts a fresh ON period timed
+    // from app launch - same behavior as the C rewrite, whose first
+    // WM_TIMER tick after startup sees output_on=true against a
+    // zero-initialized "last tick" value and treats it as an OFF->ON
+    // edge. The app has no way to know how long it was ON while the
+    // app itself wasn't running, so that gap isn't credited - only
+    // time the app actually tracked ever counts.
+    this.onSince = this.state.outputOn ? Date.now() : null
+  }
+
+  private currentUptimeSeconds(): number {
+    const live = this.onSince !== null ? (Date.now() - this.onSince) / 1000 : 0
+    return this.uptimeBaseSeconds + live
   }
 
   getState(): ChannelState {
-    return { ...this.state }
+    return { ...this.state, uptimeSeconds: this.currentUptimeSeconds() }
   }
 
   private update(patch: Partial<ChannelState>): void {
+    if (patch.outputOn !== undefined && patch.outputOn !== this.state.outputOn) {
+      if (patch.outputOn) {
+        this.onSince = Date.now()
+      } else if (this.onSince !== null) {
+        this.uptimeBaseSeconds += (Date.now() - this.onSince) / 1000
+        this.onSince = null
+      }
+    }
     this.state = { ...this.state, ...patch }
     this.emit('changed', this.getState())
   }

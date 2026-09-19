@@ -5,3 +5,7 @@ release/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Per-install runtime icon override (see branding/README.md) - never a
+# default to ship, same as dll/Transit.dll.
+branding/icon.png

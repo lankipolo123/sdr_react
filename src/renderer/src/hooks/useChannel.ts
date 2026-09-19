@@ -13,7 +13,8 @@ export function useChannel(address: number): {
 } {
   const [state, setState] = useState<ChannelState | null>(null)
   const { requireConnected } = useConnection()
-  const { killSwitchTripped } = useSensor()
+  const { isChannelTripped } = useSensor()
+  const killSwitchTripped = isChannelTripped(address)
 
   useEffect(() => {
     let cancelled = false

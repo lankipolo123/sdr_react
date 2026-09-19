@@ -3,6 +3,7 @@ import { AppLayout } from './layouts/AppLayout'
 import { ConnectionProvider } from './contexts/ConnectionContext'
 import { LogsProvider } from './contexts/LogsContext'
 import { SensorProvider } from './contexts/SensorContext'
+import { SelectionProvider } from './contexts/SelectionContext'
 import type { PageId } from './layouts/pages'
 import { ChannelsPage } from './pages/ChannelsPage'
 import { LogsPage } from './pages/LogsPage'
@@ -26,9 +27,11 @@ export function App(): React.JSX.Element {
     <ConnectionProvider>
       <LogsProvider>
         <SensorProvider>
-          <AppLayout current={page} onNavigate={setPage}>
-            {renderPage(page)}
-          </AppLayout>
+          <SelectionProvider>
+            <AppLayout current={page} onNavigate={setPage}>
+              {renderPage(page)}
+            </AppLayout>
+          </SelectionProvider>
         </SensorProvider>
       </LogsProvider>
     </ConnectionProvider>

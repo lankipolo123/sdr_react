@@ -4,6 +4,7 @@ import type { LogPage } from '../main/logStore'
 import { MAX_CHANNELS, type Level } from '../main/protocol/constants'
 import type { DllCallResult } from '../main/dll/transit'
 import type { SensorState } from '../main/serial/sensor'
+import type { KillSwitchState } from '../main/safety'
 
 // Every channel card mounts its own onChanged listener on the shared
 // 'channel:changed' IPC event (16 of them, one per channel) - legitimate
@@ -86,13 +87,20 @@ const api = {
     }
   },
   killSwitch: {
-    getState: (): Promise<boolean> => ipcRenderer.invoke('killSwitch:getState'),
-    reset: (): Promise<void> => ipcRenderer.invoke('killSwitch:reset'),
-    onChanged: (callback: (tripped: boolean) => void): (() => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, tripped: boolean): void => callback(tripped)
+    getState: (): Promise<KillSwitchState> => ipcRenderer.invoke('killSwitch:getState'),
+    resetAll: (): Promise<void> => ipcRenderer.invoke('killSwitch:resetAll'),
+    resetOne: (address: number): Promise<void> => ipcRenderer.invoke('killSwitch:resetOne', address),
+    manualTrip: (): Promise<void> => ipcRenderer.invoke('killSwitch:manualTrip'),
+    onChanged: (callback: (state: KillSwitchState) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: KillSwitchState): void => callback(state)
       ipcRenderer.on('killSwitch:changed', listener)
       return () => ipcRenderer.removeListener('killSwitch:changed', listener)
     }
+  },
+  branding: {
+    status: (): Promise<boolean> => ipcRenderer.invoke('branding:status'),
+    chooseLogo: (): Promise<boolean> => ipcRenderer.invoke('branding:chooseLogo'),
+    resetLogo: (): Promise<boolean> => ipcRenderer.invoke('branding:resetLogo')
   }
 }
 

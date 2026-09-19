@@ -1,8 +1,11 @@
-import { Plug, Radio, SignalHigh, History, Thermometer, type LucideIcon } from 'lucide-react'
+import { Plug, Radio, SignalHigh, History, Thermometer, Grid2x2, type LucideIcon } from 'lucide-react'
 import { useAllChannels } from '../hooks/useAllChannels'
 import { useLogs } from '../contexts/LogsContext'
 import { useConnection } from '../contexts/ConnectionContext'
 import { useSensor } from '../contexts/SensorContext'
+import { SensorHeatmap } from '../components/SensorHeatmap'
+import { BrandingCard } from '../components/BrandingCard'
+import { averageTemperature } from '../lib/sensor'
 import { LEVEL_LABELS, MAX_CHANNELS, type Level } from '../../../main/protocol/constants'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -71,6 +74,7 @@ export function DashboardPage(): React.JSX.Element {
 
   const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.idle
   const statusLabel = status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Not Connected'
+  const avgTempC = averageTemperature(sensorState.units)
 
   return (
     <div className="p-4">
@@ -116,9 +120,11 @@ export function DashboardPage(): React.JSX.Element {
             ))}
           </div>
         </DashboardCard>
+
+        <BrandingCard />
       </div>
 
-      <DashboardCard title="Amplifier Temperature" icon={Thermometer} className="mt-3">
+      <DashboardCard title="Amplifier Temperature (Avg)" icon={Thermometer} className="mt-3">
         <div className="mt-2 flex items-center gap-1.5">
           <select
             className="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-white px-2 text-xs text-text-dark"
@@ -155,27 +161,31 @@ export function DashboardPage(): React.JSX.Element {
                 'linear-gradient(to right, #FFFFFF 0%, #22C55E 25%, #3B82F6 60%, #F59E0B 76.25%, #DC2626 100%)'
             }}
           >
-            {sensorState.hasReading && (
+            {avgTempC !== null && (
               <div
                 className="absolute -top-0.5 h-[18px] w-[2px] -translate-x-px bg-[#14161A]"
-                style={{ left: `${Math.max(0, Math.min(100, (sensorState.temperatureC / GAUGE_MAX_C) * 100))}%` }}
+                style={{ left: `${Math.max(0, Math.min(100, (avgTempC / GAUGE_MAX_C) * 100))}%` }}
               />
             )}
           </div>
           <span
             className="min-w-[46px] text-sm font-bold"
-            style={{ color: sensorState.hasReading ? tempBandColor(sensorState.temperatureC) : undefined }}
+            style={{ color: avgTempC !== null ? tempBandColor(avgTempC) : undefined }}
           >
-            {sensorState.hasReading ? `${sensorState.temperatureC.toFixed(1)} C` : '-'}
+            {avgTempC !== null ? `${avgTempC.toFixed(1)} C` : '-'}
           </span>
           <span className="whitespace-nowrap text-[11px] text-text-muted-ref">
-            {sensorState.hasReading
-              ? `Humidity: ${sensorState.humidityPct.toFixed(1)} %`
+            {avgTempC !== null
+              ? `Across ${sensorState.units.filter((u) => u.hasReading).length}/${sensorState.units.length} bays`
               : sensorState.connected
-                ? `Reading… (try ${sensorState.attemptCount}, last ${sensorState.lastRxLen} B)`
-                : 'Humidity: -'}
+                ? 'Reading…'
+                : 'No readings yet'}
           </span>
         </div>
+      </DashboardCard>
+
+      <DashboardCard title="Sensor Heatmap" icon={Grid2x2} className="mt-3">
+        <SensorHeatmap units={sensorState.units} />
       </DashboardCard>
 
       <DashboardCard title="Recent Activity" icon={History} className="mt-3">

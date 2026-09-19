@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Sidebar } from '../components/Sidebar'
+import { ForceTripDialog } from '../components/ForceTripDialog'
 import { cn } from '../lib/utils'
 import { useConnection } from '../contexts/ConnectionContext'
 import { useLogs } from '../contexts/LogsContext'
@@ -15,7 +16,9 @@ interface AppLayoutProps {
 
 export function AppLayout({ current, onNavigate, children }: AppLayoutProps): React.JSX.Element {
   const { status, statusText, connect, disconnect } = useConnection()
-  const { killSwitchTripped, resetKillSwitch } = useSensor()
+  const { killSwitchState, resetKillSwitchAll, manualTripKillSwitch } = useSensor()
+  const [showForceTripConfirm, setShowForceTripConfirm] = useState(false)
+  const trippedCount = killSwitchState.trippedAddresses.length
   const logs = useLogs()
   const latestLog = logs[0] ?? null
   const titleBarRef = useRef<HTMLDivElement>(null)
@@ -87,13 +90,25 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
           >
             {status === 'connected' ? 'Disconnect' : 'Connect'}
           </Button>
+          {/* Always available, not gated on a trip already being active -
+              same as the C rewrite's manual trip button, for testing the
+              interlock without needing the amplifier to actually reach
+              KILL_SWITCH_THRESHOLD_C. */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 border-white/30 bg-transparent px-2 text-[10px] text-white hover:bg-white/10"
+            onClick={() => setShowForceTripConfirm(true)}
+          >
+            Force Trip
+          </Button>
         </div>
       </div>
 
       {/* Safety-critical, so shown globally regardless of which page is
-          open, not tucked into the Dashboard - see SensorContext for the
+          open, not tucked into the Dashboard - see safety.ts for the
           60C, manual-reset-only trip logic. */}
-      {killSwitchTripped && (
+      {trippedCount > 0 && (
         <div className="flex items-center gap-2 border-b border-warning-border bg-warning-bg py-1.5 pl-44 pr-3 text-xs">
           {/* Sidebar is `fixed` + `z-10` starting right below the
               titlebar (see Sidebar.tsx), so without this left padding it
@@ -101,17 +116,28 @@ export function AppLayout({ current, onNavigate, children }: AppLayoutProps): Re
               content pane and Logs line already use to sit flush next
               to it instead of underneath it. */}
           <span className="flex-1 font-semibold text-warning-text">
-            KILL SWITCH TRIPPED - amplifier over temperature, all channels forced OFF
+            KILL SWITCH TRIPPED - {trippedCount} channel{trippedCount === 1 ? '' : 's'} forced OFF. Reset individual
+            channels from their card, or reset all here.
           </span>
           <Button
             size="sm"
             variant="outline"
             className="h-6 border-navy bg-navy px-2 text-[10px] text-white hover:bg-navy/90"
-            onClick={resetKillSwitch}
+            onClick={resetKillSwitchAll}
           >
-            Reset
+            Reset All
           </Button>
         </div>
+      )}
+
+      {showForceTripConfirm && (
+        <ForceTripDialog
+          onConfirm={() => {
+            setShowForceTripConfirm(false)
+            void manualTripKillSwitch()
+          }}
+          onCancel={() => setShowForceTripConfirm(false)}
+        />
       )}
 
       {/* Sidebar (1) is `fixed` (see Sidebar.tsx) - pinned to the

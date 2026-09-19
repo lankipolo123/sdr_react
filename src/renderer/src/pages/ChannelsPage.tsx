@@ -1,4 +1,5 @@
 import { ChannelCard } from '../components/ChannelCard'
+import { BulkActionsBar } from '../components/BulkActionsBar'
 import { MAX_CHANNELS } from '../../../main/protocol/constants'
 
 // Auto-fill instead of a hardcoded column count (the reference app's
@@ -12,6 +13,7 @@ export function ChannelsPage(): React.JSX.Element {
 
   return (
     <div className="p-4">
+      <BulkActionsBar />
       <div
         className="grid gap-2"
         style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_MIN_WIDTH}px, 1fr))` }}
