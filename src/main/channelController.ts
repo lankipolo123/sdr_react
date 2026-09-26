@@ -121,78 +121,96 @@ export class ChannelController extends EventEmitter {
     this.emit('changed', this.getState())
   }
 
-  turnOutputOn(): void {
-    this.send(buildOutputSwitch(this.address, true), 'Output ON', { outputOn: true, level: this.state.lastLevel })
+  // All 4 command methods return Promise<void>, resolving once their
+  // send has actually settled (see send() below) - not needed by most
+  // callers (the existing channel:* IPC handlers fire-and-forget these,
+  // same as before), but app:turnOffAllAndQuit in main/index.ts needs
+  // to know every channel's OFF command has genuinely gone out, paced
+  // through the single shared PortScheduler, before calling app.quit() -
+  // otherwise the process could exit mid-queue with channels still on.
+  turnOutputOn(): Promise<void> {
+    return this.send(buildOutputSwitch(this.address, true), 'Output ON', {
+      outputOn: true,
+      level: this.state.lastLevel
+    })
   }
 
-  turnOutputOff(): void {
-    this.send(buildOutputSwitch(this.address, false), 'Output OFF', { outputOn: false, level: 0 })
+  turnOutputOff(): Promise<void> {
+    return this.send(buildOutputSwitch(this.address, false), 'Output OFF', { outputOn: false, level: 0 })
   }
 
-  setLevel(level: Level): void {
+  setLevel(level: Level): Promise<void> {
     const powerCode = LEVEL_TO_POWER_CODE[level]
     if (powerCode === null) {
-      this.turnOutputOff()
-      return
+      return this.turnOutputOff()
     }
     const patch: Partial<ChannelState> = { level, lastLevel: level }
+    const sends: Promise<void>[] = []
     if (!this.state.outputOn) {
       // Was off - needs an explicit Output Switch ON first (Signal
       // Control alone doesn't re-enable RF output on this hardware,
       // confirmed in the reference app). Queued as two separate sends
-      // through the same scheduler, in order.
-      this.send(buildOutputSwitch(this.address, true), 'Output ON (resume)', { outputOn: true })
+      // through the same scheduler, in order - calling send() twice
+      // synchronously here (not awaited between them) still serializes
+      // correctly, since PortScheduler.acquire() queues the second one
+      // the instant it's called, before either has settled.
+      sends.push(this.send(buildOutputSwitch(this.address, true), 'Output ON (resume)', { outputOn: true }))
     }
-    this.send(
-      buildSignalControl(this.address, this.state.mode, powerCode),
-      `Level -> ${level}`,
-      { ...patch, outputOn: true }
+    sends.push(
+      this.send(buildSignalControl(this.address, this.state.mode, powerCode), `Level -> ${level}`, {
+        ...patch,
+        outputOn: true
+      })
     )
+    return Promise.all(sends).then(() => undefined)
   }
 
-  setMode(mode: number): void {
+  setMode(mode: number): Promise<void> {
     const powerCode = LEVEL_TO_POWER_CODE[this.state.level] ?? LEVEL_TO_POWER_CODE[this.state.lastLevel]!
-    this.send(buildSignalControl(this.address, mode, powerCode), `Mode -> ${mode}`, { mode })
+    return this.send(buildSignalControl(this.address, mode, powerCode), `Mode -> ${mode}`, { mode })
   }
 
-  private send(frame: Buffer, label: string, applyOnSettle: Partial<ChannelState>): void {
+  private send(frame: Buffer, label: string, applyOnSettle: Partial<ChannelState>): Promise<void> {
     this.update({ busy: true, lastCommand: label })
-    this.scheduler.acquire(this, () => {
-      // frame itself (the raw/logical protocol bytes) stays confined to
-      // this function and is never emitted anywhere - only
-      // dllSendFrame's sentTokens (the safe, DLL-translated values) get
-      // published, via the 'log' event below, never via `this.state`.
-      const { error, sentTokens } = dllSendFrame(frame)
-      // Single attempt, no retry (final tuned behavior - see module
-      // docstring). Settle delay paces sends and gives the "applied
-      // optimistically" label time to mean something, rather than
-      // flipping state the instant the DLL call returns.
-      setTimeout(() => {
-        this.scheduler.release(this)
-        this.update({
-          ...applyOnSettle,
-          busy: false,
-          lastCommandUnconfirmed: true,
-          ...(error !== null ? { lastCommand: `${label} - DLL error: ${error}` } : {})
-        })
-        this.emit('log', {
-          address: this.address,
-          label: error !== null ? `${label} - DLL error: ${error}` : label,
-          sentTokens,
-          timestamp: Date.now()
-        } satisfies LogEntry)
-        // A DLL call throwing (as opposed to succeeding with a "rejected"
-        // response - there isn't one here, sends are fire-and-forget) means
-        // the hardware bridge itself is gone, most likely the USB adapter
-        // was unplugged. ConnectionContext's `status` only ever gets set by
-        // explicit connect()/disconnect() calls, so without this it would
-        // sit on "connected" forever while every command kept failing -
-        // requireConnected() would keep waving commands through into a dead
-        // DLL instead of re-prompting the user to reconnect.
-        if (error !== null) {
-          this.emit('port-lost', error)
-        }
-      }, SEND_SETTLE_MS)
+    return new Promise((resolve) => {
+      this.scheduler.acquire(this, () => {
+        // frame itself (the raw/logical protocol bytes) stays confined to
+        // this function and is never emitted anywhere - only
+        // dllSendFrame's sentTokens (the safe, DLL-translated values) get
+        // published, via the 'log' event below, never via `this.state`.
+        const { error, sentTokens } = dllSendFrame(frame)
+        // Single attempt, no retry (final tuned behavior - see module
+        // docstring). Settle delay paces sends and gives the "applied
+        // optimistically" label time to mean something, rather than
+        // flipping state the instant the DLL call returns.
+        setTimeout(() => {
+          this.scheduler.release(this)
+          this.update({
+            ...applyOnSettle,
+            busy: false,
+            lastCommandUnconfirmed: true,
+            ...(error !== null ? { lastCommand: `${label} - DLL error: ${error}` } : {})
+          })
+          this.emit('log', {
+            address: this.address,
+            label: error !== null ? `${label} - DLL error: ${error}` : label,
+            sentTokens,
+            timestamp: Date.now()
+          } satisfies LogEntry)
+          // A DLL call throwing (as opposed to succeeding with a "rejected"
+          // response - there isn't one here, sends are fire-and-forget) means
+          // the hardware bridge itself is gone, most likely the USB adapter
+          // was unplugged. ConnectionContext's `status` only ever gets set by
+          // explicit connect()/disconnect() calls, so without this it would
+          // sit on "connected" forever while every command kept failing -
+          // requireConnected() would keep waving commands through into a dead
+          // DLL instead of re-prompting the user to reconnect.
+          if (error !== null) {
+            this.emit('port-lost', error)
+          }
+          resolve()
+        }, SEND_SETTLE_MS)
+      })
     })
   }
 

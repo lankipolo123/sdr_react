@@ -21,12 +21,25 @@ ipcRenderer.setMaxListeners(MAX_CHANNELS + 10)
 const api = {
   app: {
     quit: (): Promise<void> => ipcRenderer.invoke('app:quit'),
+    // "Turn Off and Close" choice on the close-confirmation dialog -
+    // commands every channel off for real (paced through the shared
+    // PortScheduler - can take a few seconds for a full rack) before
+    // actually quitting. See main/index.ts's own comment.
+    turnOffAllAndQuit: (): Promise<void> => ipcRenderer.invoke('app:turnOffAllAndQuit'),
     // One-shot: reports the real, unclipped content height (measured
     // from the root layout element's scrollHeight) once shortly after
     // the Commands page's first paint, so the window can size itself
     // to fit exactly instead of shipping a guessed constant that goes
     // stale every time the layout changes height.
     reportContentHeight: (height: number): void => ipcRenderer.send('app:contentHeight', height)
+  },
+  // Load Config / Save Config (Sidebar.tsx) - a config file is the same
+  // channels.ini format channelStore.ts already uses for the automatic
+  // per-restart save, just written to/read from a user-picked path via
+  // a real file dialog instead of the fixed userData one.
+  config: {
+    save: (): Promise<{ saved: boolean; path: string | null }> => ipcRenderer.invoke('config:save'),
+    load: (): Promise<{ applied: number; skipped: number } | null> => ipcRenderer.invoke('config:load')
   },
   dll: {
     autoConnect: (): Promise<DllCallResult> => ipcRenderer.invoke('dll:autoConnect'),

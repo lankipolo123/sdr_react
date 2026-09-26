@@ -1,23 +1,24 @@
-import { useState } from 'react'
 import { Button } from './ui/button'
 import { useConnection } from '../contexts/ConnectionContext'
 import { useSensor } from '../contexts/SensorContext'
 import { useSelection } from '../contexts/SelectionContext'
-import { LEVEL_LABELS, MAX_CHANNELS, MODE_NAMES, type Level } from '../../../main/protocol/constants'
+import { LEVEL_LABELS, MAX_CHANNELS, type Level } from '../../../main/protocol/constants'
 
 const ALL_ADDRESSES = Array.from({ length: MAX_CHANNELS }, (_, i) => i + 1)
 
 // Direct port of the C rewrite's Bulk Actions bar: check a card's
 // checkbox to select it (see ChannelCard/SelectionContext), then apply
-// ON/OFF/Set-mode/Set-level to every selected channel at once. Loops
-// the same per-channel IPC calls a single card already uses - no new
+// ON/OFF/Set-level to every selected channel at once. Loops the same
+// per-channel IPC calls a single card already uses - no new
 // main-process surface needed, this is purely a renderer-side
-// convenience over the existing channel:* API.
+// convenience over the existing channel:* API. No Set-mode anymore -
+// every channel is Pseudo Random Noise only now (direct decision,
+// removing the Mode select + Set button entirely, matching the C
+// rewrite's own Bulk Actions bar).
 export function BulkActionsBar(): React.JSX.Element {
   const { selected, selectAll, clear } = useSelection()
   const { requireConnected } = useConnection()
   const { isChannelTripped } = useSensor()
-  const [bulkMode, setBulkMode] = useState<number>(0)
 
   const count = selected.size
 
@@ -46,10 +47,6 @@ export function BulkActionsBar(): React.JSX.Element {
     forEachSelected((address) => {
       if (level === 0 || !isChannelTripped(address)) void window.sdr.channels.setLevel(address, level)
     })
-  }
-
-  function bulkSetMode(): void {
-    forEachSelected((address) => void window.sdr.channels.setMode(address, bulkMode))
   }
 
   return (
@@ -101,28 +98,6 @@ export function BulkActionsBar(): React.JSX.Element {
           {LEVEL_LABELS[lvl]}
         </Button>
       ))}
-
-      <div className="mx-1 h-4 w-px bg-border-subtle" />
-
-      <select
-        className="h-6 min-w-0 rounded-[7px] border border-border-subtle bg-white px-1.5 text-[10px] font-semibold text-text-dark"
-        value={bulkMode}
-        onChange={(e) => setBulkMode(Number(e.target.value))}
-      >
-        {Object.entries(MODE_NAMES).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-      <Button
-        size="sm"
-        className="h-6 bg-navy px-2 text-[10px] text-white hover:bg-navy/90"
-        onClick={bulkSetMode}
-        disabled={count === 0}
-      >
-        Set Mode
-      </Button>
     </div>
   )
 }

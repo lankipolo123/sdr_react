@@ -286,6 +286,76 @@ app.whenReady().then(() => {
   // app.quit() closes every window first, which fires it naturally.
   ipcMain.handle('app:quit', () => app.quit())
 
+  // "Turn Off and Close" choice on the renderer's close-confirmation
+  // dialog (see LogoutDialog.tsx / the C rewrite's IDD_CLOSE_CONFIRM) -
+  // direct port of on_app_close_shutdown(): command every channel off
+  // for real, THEN quit, rather than the "Keep Running and Close" path
+  // (plain app:quit above) which leaves channels transmitting as-is.
+  // Awaits every controller.turnOutputOff() - now that send() resolves
+  // on real settle (see channelController.ts) - before calling
+  // app.quit(), so the process can't exit mid-queue with some channels
+  // still genuinely on (PortScheduler serializes all 16 through one
+  // shared DLL connection, so this can take a few seconds for a full
+  // rack). Channel state itself is saved either way, unconditionally,
+  // by the window-all-closed handler below - not specific to this path.
+  ipcMain.handle('app:turnOffAllAndQuit', async () => {
+    await Promise.all(Array.from(channels.values()).map((controller) => controller.turnOutputOff()))
+    app.quit()
+  })
+
+  // Load Config / Save Config (Sidebar.tsx) - direct port of the C
+  // rewrite's Commands panel buttons. Reuses the exact same
+  // channels.ini format channelStore.ts already round-trips for the
+  // automatic per-restart save (see window-all-closed below) - a
+  // "config file" IS a channels.ini, just written to/read from a path
+  // the user picks via a real file dialog instead of the fixed
+  // userData one.
+  ipcMain.handle('config:save', async () => {
+    const result = await dialog.showSaveDialog({
+      title: 'Save Configuration',
+      defaultPath: 'channels.ini',
+      filters: [{ name: 'Config Files', extensions: ['ini'] }]
+    })
+    if (result.canceled || result.filePath === undefined) return { saved: false, path: null }
+    saveChannelStates(
+      Array.from(channels.values()).map((controller) => controller.getState()),
+      result.filePath
+    )
+    return { saved: true, path: result.filePath }
+  })
+  ipcMain.handle('config:load', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Load Configuration',
+      filters: [{ name: 'Config Files', extensions: ['ini'] }],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+
+    const loaded = loadChannelStates(result.filePaths[0])
+    let applied = 0
+    let skipped = 0
+    // Same kill-switch-skip convention as the C rewrite's
+    // on_load_config_clicked(): OFF always applies even tripped, ON
+    // skips a tripped channel. Mode is never touched - every channel
+    // is fixed to Pseudo Random Noise regardless of what an old config
+    // file (saved before that became true) might say.
+    for (const [address, saved] of loaded) {
+      const controller = channels.get(address)
+      if (controller === undefined) continue
+      if (saved.outputOn === true) {
+        if (!safety.allowPowerOn(address)) {
+          skipped++
+          continue
+        }
+        controller.setLevel(saved.lastLevel ?? 1)
+      } else {
+        controller.turnOutputOff()
+      }
+      applied++
+    }
+    return { applied, skipped }
+  })
+
   createWindow()
 
   app.on('activate', () => {

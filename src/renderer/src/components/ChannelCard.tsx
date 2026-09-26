@@ -7,7 +7,7 @@ import { useChannel } from '../hooks/useChannel'
 import { useConnection } from '../contexts/ConnectionContext'
 import { useSensor } from '../contexts/SensorContext'
 import { useSelection } from '../contexts/SelectionContext'
-import { LEVEL_LABELS, MODE_NAMES, type Level } from '../../../main/protocol/constants'
+import { LEVEL_LABELS, MODE_NAMES, MODE_WHITE_NOISE, type Level } from '../../../main/protocol/constants'
 
 // Matches components/level_slider.py's SLIDER_SEND_DEBOUNCE_MS - avoids
 // firing a DLL send on every intermediate value while dragging.
@@ -18,20 +18,12 @@ interface ChannelCardProps {
 }
 
 export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
-  const { state, turnOn, turnOff, setLevel, setMode } = useChannel(address)
+  const { state, turnOn, turnOff, setLevel } = useChannel(address)
   const { status: connectionStatus } = useConnection()
   const { isChannelTripped, resetKillSwitchOne } = useSensor()
   const { isSelected, toggle } = useSelection()
   const tripped = isChannelTripped(address)
   const selected = isSelected(address)
-
-  // Mode selection is local/uncommitted until "Set" is clicked - matches
-  // the reference app's mode_combo + mode_set_btn exactly (selecting a
-  // mode does NOT apply it by itself).
-  const [selectedMode, setSelectedMode] = useState<number>(0)
-  useEffect(() => {
-    if (state !== null) setSelectedMode(state.mode)
-  }, [state?.mode])
 
   // Live-ticking "Up HH:MM:SS" odometer (see channelController.ts's
   // uptimeSeconds - always freshly computed as of the last IPC update,
@@ -108,28 +100,16 @@ export function ChannelCard({ address }: ChannelCardProps): React.JSX.Element {
         </button>
       </div>
 
-      <div className="flex items-center gap-1">
-        <select
-          className={cn(
-            'h-6 min-w-0 flex-1 rounded-[7px] border border-border-subtle bg-white px-1.5 text-[10px] font-semibold',
-            isOn ? 'text-accent-blue' : 'text-text-muted-ref'
-          )}
-          value={selectedMode}
-          onChange={(e) => setSelectedMode(Number(e.target.value))}
-        >
-          {Object.entries(MODE_NAMES).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="h-6 shrink-0 rounded-[7px] bg-navy px-1.5 text-[10px] font-semibold text-white"
-          onClick={() => setMode(selectedMode)}
-        >
-          Set
-        </button>
+      {/* Fixed mode indicator - every channel is Pseudo Random Noise
+          only now (direct decision, removing the Mode select + Set
+          button entirely, matching the C rewrite's own card). */}
+      <div
+        className={cn(
+          'flex h-6 items-center rounded-[7px] px-1.5 text-[10px] font-semibold',
+          isOn ? 'text-accent-blue' : 'text-text-muted-ref'
+        )}
+      >
+        {MODE_NAMES[MODE_WHITE_NOISE]}
       </div>
 
       <PowerButton checked={isOn} onChange={(checked) => (checked ? turnOn() : turnOff())} disabled={state.busy} />
